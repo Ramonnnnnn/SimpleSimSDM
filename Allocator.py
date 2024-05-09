@@ -2,17 +2,26 @@ import random
 import numpy as np
 import TopologyBuilder
 import Parser
-import FirstFit
 from Modulation import Modulation
 import math
 import Metrics
+import InterfaceTerminal
+
+#RESOURCE ALLOCATION ALGOs
+import FirstFit
+import SmallestFit
+import MMM
 
 class Allocator:
-    def __init__(self, env, max_attempts, traffic_generator_obj, topology, s_d_distribution, call_type_distribution, verbose, imposed_load, metrics, seed):
+    def __init__(self, env, max_attempts, traffic_generator_obj, topology, s_d_distribution, call_type_distribution, verbose, imposed_load, metrics, seed, interval):
         #Env
         self.env = env
         self.verbose = verbose
         self.seed = seed
+
+        #Number of attempts to update progress bar:
+        self.univ_attempt = 0
+        self.interval = interval # we simulate n simulations in the same load to obtain error margin. This point to which step we are right now
 
         #Number of simulations per_round
         self.max_attempts = max_attempts #usually 10.000
@@ -62,9 +71,8 @@ class Allocator:
         if attempt % 100 == 0:
             self.metrics.mean_frag_topology(self.topology.get_all_edge_matrices())
             self.metrics.mean_CpS_topology(self.topology.get_all_edge_matrices())
-
-
-
+            # single load progress bar:
+            InterfaceTerminal.InterfaceTerminal.print_progress_bar(attempt, self.max_attempts, prefix=f'Simulation Progress: Load={self.imposed_load}, Interval={self.interval}', suffix='', length=50)
 
         if self.verbose:
             print(f"Call-Number: {attempt}")
@@ -88,14 +96,25 @@ class Allocator:
 
             #Spectrum
             available_spectrum = self.topology.or_matrices_along_path(shortest_paths[i])
-            if self.verbose:
-                print(f"Spectrum before allocation: {available_spectrum}")
+            # if self.verbose:
+            #     print(f"Spectrum before allocation: {available_spectrum}")
 
 
             #Region-Finding-Algorithm
-            first_fit = FirstFit.FirstFit(available_spectrum)
-            first_fit.find_connected_components()
-            list_of_allocable_regions = first_fit.get_connected_components()
+            first_fit = FirstFit.FirstFit(available_spectrum) #instantiate class
+            first_fit.find_connected_components() #call region finding method
+            list_of_allocable_regions = first_fit.get_connected_components() #store
+
+            #BEST FIT - FIX NAMING CONVENTIONS
+            # first_fit = SmallestFit.SmallestFit(available_spectrum)
+            # first_fit.find_connected_components()
+            # list_of_allocable_regions = first_fit.get_connected_components()
+
+            #MMM ALGORITHM
+            mmm = MMM.MeenyMinyMo(available_spectrum)
+            mmm.find_connected_components()
+            list_of_allocable_regions = mmm.get_connected_components()
+
 
 
             #Slots to allocate
@@ -116,9 +135,9 @@ class Allocator:
                     #self.calls_made += 1
                     successful = True
                     available_spectrum = self.topology.or_matrices_along_path(shortest_paths[i])
-                    if self.verbose:
-                        print("Success")
-                        print(f"Spectrum after allocation: {available_spectrum}")
+                    # if self.verbose:
+                    #     print("Success")
+                    #     print(f"Spectrum after allocation: {available_spectrum}")
                     #Deallocation
                     deallocate_time = abs(random.normalvariate(mu=1, sigma=1)) #Time to remain allocated -> change later
                     self.env.process(self.deallocate_slots(shortest_paths[i], region, demanded_slots, deallocate_time))
@@ -148,6 +167,7 @@ class Allocator:
 
             self.allocate_slots(attempt)
             attempt += 1
+
 
 
     def allocate_along_path(self, shortest_path_i, region, demanded_slots):
@@ -196,3 +216,5 @@ class Allocator:
     def get_blocked_attempts(self):
         return self.blocked_attempts
 
+    def get_univ_attempt(self):
+        return self.univ_attempt
