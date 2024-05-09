@@ -1,3 +1,4 @@
+import os
 import simpy
 import time
 import Allocator
@@ -6,6 +7,7 @@ import TrafficGenerator
 import Metrics
 import Logger
 import Parser
+import InterfaceTerminal
 import FinalStatisticsPlotter
 
 # FIX SEEDS!!!!!!!!
@@ -14,24 +16,27 @@ import FinalStatisticsPlotter
 matrix_rows = 7
 matrix_cols = 320
 max_attempts = 10000
-imposed_load = 1000
+#Provide Simulation Details?
 verbose = False
-
 # Load Parameters with interval
 seed = [1,2,3,4,5,6,7,8,9,10]
 starting_load = 500
-final_load = 600
+final_load = 1000
 step = 50
 
 # Log: include hops, ee, utilization.
 # name convention: metric_algorithm.csv
 # metric name MUST be same as method name for final calculations
-csv_files = ['BBR_FF.csv', 'fragmentation_FF.csv', 'CpS_FF.csv']
-csv_save_folder = "/Users/ramonoliveira/Desktop/CG - Relatório 3D/SimpleSIm/CVSs"
+# metrics available: "BBR", "fragmentation" & "CpS"
+
+base_dir = os.path.dirname(__file__)
+
+csv_files = ['BBR_MMM.csv', 'fragmentation_MMM.csv', 'CpS_MMM.csv']
+csv_save_folder = os.path.join(base_dir, "CVSs")
 logger = Logger.Logger(csv_save_folder, csv_files)
 
 # Topology Blueprint
-XML_path = "/Users/ramonoliveira/Desktop/CG - Relatório 3D/SimpleSIm/xml/Image-nsf.xml"
+XML_path = os.path.join(base_dir, "xml/Image-nsf.xml" )
 
 for load in range(starting_load, final_load + 1, step):
     #Parse XML
@@ -68,7 +73,7 @@ for load in range(starting_load, final_load + 1, step):
         call_types_dist = traffic_generator_object.generate_normal_distribution_call_types(num_call_types_dist)
 
         # Create the Allocator process
-        allocator = Allocator.Allocator(env, max_attempts, traffic_generator_object, topology, generated_pairs, call_types_dist, verbose, imposed_load, metrics, seed[interval]) #Inicializa
+        allocator = Allocator.Allocator(env, max_attempts, traffic_generator_object, topology, generated_pairs, call_types_dist, verbose, imposed_load, metrics, seed[interval], interval) #Inicializa
         env.process(allocator.allocation_process()) # Calls
 
         # Run the simulation
