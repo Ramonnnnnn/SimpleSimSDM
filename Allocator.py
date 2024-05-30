@@ -6,6 +6,7 @@ from Modulation import Modulation
 import math
 import Metrics
 import InterfaceTerminal
+import MF
 
 #RESOURCE ALLOCATION ALGOs
 import FirstFit
@@ -62,6 +63,7 @@ class Allocator:
         self.mean_arrival_time = (mean_holding_time*(mean_rate/max_rate))/load
 
         self.metrics = metrics
+        self.use_multi_criteria = True
         
 
     #Does the heavy lifting: Source, destination,
@@ -79,9 +81,16 @@ class Allocator:
             print(f"(Source/Destination): {self.generated_pairs[attempt][0]} -> {self.generated_pairs[attempt][1]}")
             print(f"rate: {self.call_info[self.num_call_types_dist[attempt]]['rate']}")
 
-        #SHORTEST PATH TO THE SRC-DST
-        shortest_paths = self.topology.find_n_shortest_paths(self.graph, self.generated_pairs[attempt][0], self.generated_pairs[attempt][1], 5)
-        rate = self.call_info[self.num_call_types_dist[attempt]]['rate'] #25, 50... 1000
+        if self.use_multi_criteria == False:
+            #SHORTEST PATHS TO THE SRC-DST
+            shortest_paths = self.topology.find_n_shortest_paths(self.graph, self.generated_pairs[attempt][0], self.generated_pairs[attempt][1], 5)
+            rate = self.call_info[self.num_call_types_dist[attempt]]['rate'] #25, 50... 1000
+        if self.use_multi_criteria == True:
+            #SHORTEST MULTI-CRITERIA PATH
+            shortest_paths = self.topology.find_n_shortest_weighted_paths(self.graph, self.generated_pairs[attempt][0], self.generated_pairs[attempt][1], 5)
+            rate = self.call_info[self.num_call_types_dist[attempt]]['rate'] #25, 50... 1000
+
+
 
 
         self.calls_made += 1
@@ -96,24 +105,29 @@ class Allocator:
 
             #Spectrum
             available_spectrum = self.topology.or_matrices_along_path(shortest_paths[i])
-            # if self.verbose:
-            #     print(f"Spectrum before allocation: {available_spectrum}")
+
+
 
 
             #Region-Finding-Algorithm
-            first_fit = FirstFit.FirstFit(available_spectrum) #instantiate class
-            first_fit.find_connected_components() #call region finding method
-            list_of_allocable_regions = first_fit.get_connected_components() #store
+            # first_fit = FirstFit.FirstFit(available_spectrum) #instantiate class
+            # first_fit.find_connected_components() #call region finding method
+            # list_of_allocable_regions = first_fit.get_connected_components() #store
 
             #BEST FIT - FIX NAMING CONVENTIONS
-            # first_fit = SmallestFit.SmallestFit(available_spectrum)
-            # first_fit.find_connected_components()
-            # list_of_allocable_regions = first_fit.get_connected_components()
+            # best_fit = SmallestFit.SmallestFit(available_spectrum)
+            # best_fit.find_connected_components()
+            # list_of_allocable_regions = best_fit.get_connected_components()
 
             #MMM ALGORITHM
-            mmm = MMM.MeenyMinyMo(available_spectrum)
-            mmm.find_connected_components()
-            list_of_allocable_regions = mmm.get_connected_components()
+            # mmm = MMM.MeenyMinyMo(available_spectrum)
+            # mmm.find_connected_components()
+            # list_of_allocable_regions = mmm.get_connected_components()
+
+            #MF ALGORITHM
+            mf = MF.MeenyFirst(available_spectrum)
+            mf.find_connected_components()
+            list_of_allocable_regions = mf.get_connected_components()
 
 
 
@@ -132,13 +146,7 @@ class Allocator:
                 if len(region) >= demanded_slots:
                     #Allocation
                     self.allocate_along_path(shortest_paths[i], region, demanded_slots)
-                    #self.calls_made += 1
                     successful = True
-                    available_spectrum = self.topology.or_matrices_along_path(shortest_paths[i])
-                    # if self.verbose:
-                    #     print("Success")
-                    #     print(f"Spectrum after allocation: {available_spectrum}")
-                    #Deallocation
                     deallocate_time = abs(random.normalvariate(mu=1, sigma=1)) #Time to remain allocated -> change later
                     self.env.process(self.deallocate_slots(shortest_paths[i], region, demanded_slots, deallocate_time))
                     break
@@ -185,6 +193,20 @@ class Allocator:
                 edge_matrix_path[row][col] = 1
             self.topology.update_matrix_in_topology(src, dst, edge_matrix_path)
 
+        if self.use_multi_criteria == True:
+            for i in range(len(shortest_path_i) - 1):
+
+                src, dst = shortest_path_i[i], shortest_path_i[i + 1]
+
+
+                # update occupancy
+                self.topology.set_edge_occupancy(src, dst)
+                # update fragmentation
+                self.topology.set_edge_fragmentation(src, dst)
+                # update_weight
+                self.topology.set_edge_custom_weight(src,dst)
+
+
 
 
 
@@ -198,13 +220,22 @@ class Allocator:
             # Get the matrix associated with the edge
             edge_matrix_path = self.topology.get_edge_matrix(src, dst)
 
-            # Perform allocation operation
+            # Perform deallocation operation
             for count in range(demanded_slots):
                 row, col = region[count]
                 edge_matrix_path[row][col] = 0
             self.topology.update_matrix_in_topology(src, dst, edge_matrix_path)
 
+        if self.use_multi_criteria == True:
+            for i in range(len(shortest_path) - 1):
+                src, dst = shortest_path[i], shortest_path[i + 1]
 
+                # update occupancy
+                self.topology.set_edge_occupancy(src, dst)
+                # update fragmentation
+                self.topology.set_edge_fragmentation(src, dst)
+                # update_weight
+                self.topology.set_edge_custom_weight(src, dst)
 
 
     def print_statistics(self):
@@ -218,3 +249,11 @@ class Allocator:
 
     def get_univ_attempt(self):
         return self.univ_attempt
+
+    # def generate_spectrum_dict(self, shortest_paths):
+    #     available_spectrum_dict = {}
+    #
+    #     for i in range(len(shortest_paths)):
+    #         available_spectrum_dict[i] = self.topology.or_matrices_along_path(self.shortest_paths[i])
+    #
+    #     return available_spectrum_dict
