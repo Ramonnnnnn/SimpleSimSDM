@@ -10,7 +10,7 @@ import Parser
 import InterfaceTerminal
 import FinalStatisticsPlotter
 
-# FIX SEEDS!!!!!!!!
+# BETTER SEED IMPLEMENTATION
 
 # Simulation parameters
 matrix_rows = 7
@@ -20,9 +20,9 @@ max_attempts = 10000
 verbose = False
 # Load Parameters with interval
 seed = [1,2,3,4,5,6,7,8,9,10]
-starting_load = 500
-final_load = 1000
-step = 50
+starting_load = 50
+final_load = 500
+step = 25
 
 # Log: include hops, ee, utilization.
 # name convention: metric_algorithm.csv
@@ -31,12 +31,12 @@ step = 50
 
 base_dir = os.path.dirname(__file__)
 
-csv_files = ['BBR_MMM.csv', 'fragmentation_MMM.csv', 'CpS_MMM.csv']
+csv_files = ['BBR_MF5050(frag).csv', 'fragmentation_MF5050(frag).csv', 'CpS_MF5050(frag).csv']
 csv_save_folder = os.path.join(base_dir, "CVSs")
 logger = Logger.Logger(csv_save_folder, csv_files)
 
 # Topology Blueprint
-XML_path = os.path.join(base_dir, "xml/Image-nsf.xml" )
+XML_path = os.path.join(base_dir, "xml/Image-usa.xml" )
 
 for load in range(starting_load, final_load + 1, step):
     #Parse XML
