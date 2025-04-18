@@ -61,6 +61,7 @@ class MultiCurvePlotter:
                 df = pd.read_csv(os.path.join(self.directory, filename))
                 self.data[metric][algorithm] = df
 
+
     def plot_curves(self):
         line_styles = ['-', '--', '-.', ':']  # Different line styles
         colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']  # Different colors
@@ -75,13 +76,18 @@ class MultiCurvePlotter:
                 plt.errorbar(df['load'], df['value'], yerr=df['error'], label=algorithm, linestyle=style, color=color)
 
             # Check if the metric is 'Bbr' and set y-axis scale accordingly
-            if metric == 'Bbr':
+            if metric == 'Bbr' or metric == 'Bcr':
                 plt.yscale('log')
 
             plt.xlabel('Load')
             plt.ylabel(metric.upper())
             plt.legend()
-            plt.grid(True)
+            #plt.grid(True)
+
+            plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+            plt.minorticks_on()
+            plt.tick_params(which='both', direction='in', top=True, right=True)
+
             output_path = os.path.join(self.output_dir, f"{metric.lower()}_curves.png")
             plt.savefig(output_path)
             plt.close()
