@@ -1,3 +1,19 @@
+# BEFORE SIMULATION:
+# CHECK NAME OF TOPOLOGY + CSVs (MAIN)
+# CHECK IF YOU WANT CROSSTALK (MAIN)
+# CEHCK IF YOU WANT MULTI-CRITERIA (MAIN) -> SEE HOW IT IS CALCULATED (TOPOLOGY > Set_edge_Custom_weight)
+# CHECK ALLOCATION ALGORITHM (MAIN) -> to add, go to allocator
+# name convention: metric_algorithm.csv
+# metric name MUST be same as method name for final calculations
+# metrics available: "BBR", "fragmentation" & "CpS"
+
+
+#IMPLEMENTATION IDEAS
+#   BETTER SEED IMPLEMENTATION
+#   Log: include hops, ee.
+
+
+
 import os
 import simpy
 import time
@@ -7,109 +23,80 @@ import TrafficGenerator
 import Metrics
 import Logger
 import Parser
-import InterfaceTerminal
-import FinalStatisticsPlotter
-
-# BETTER SEED IMPLEMENTATION
+import concurrent.futures
+import math
 
 # Simulation parameters
 matrix_rows = 7
 matrix_cols = 320
 max_attempts = 10000
-#Provide Simulation Details?
 verbose = False
-# Load Parameters with interval
-seed = [1,2,3,4,5,6,7,8,9,10]
+seed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 starting_load = 50
-final_load = 500
+final_load = 600
 step = 25
-
-# Log: include hops, ee, utilization.
-# name convention: metric_algorithm.csv
-# metric name MUST be same as method name for final calculations
-# metrics available: "BBR", "fragmentation" & "CpS"
+use_multi_criteria = True
+consider_crosstalk_threshold = True
+region_finding_algorithm = "MMM" # FF BF MMM MF   ###
 
 base_dir = os.path.dirname(__file__)
-
-csv_files = ['BBR_MF5050(frag).csv', 'fragmentation_MF5050(frag).csv', 'CpS_MF5050(frag).csv']
+csv_files = ['BBR_ONE5050(NSF.newest).csv', 'fragmentation_ONE5050(NSF.newest).csv', 'CpS_ONE5050(NSF.newest).csv', 'BCR_ONE5050(NSF.newest).csv', 'crosstalk_ONE5050(NSF.newest).csv']
 csv_save_folder = os.path.join(base_dir, "CVSs")
 logger = Logger.Logger(csv_save_folder, csv_files)
+XML_path = os.path.join(base_dir, "xml/Image-nsf.xml")
 
-# Topology Blueprint
-XML_path = os.path.join(base_dir, "xml/Image-usa.xml" )
 
-for load in range(starting_load, final_load + 1, step):
-    #Parse XML
+def run_simulation_for_load(load):
+
     parser_object = Parser.XmlParser(XML_path)
-    # Start Metrics Measurement and Calculation
-    # All rates practiced (will be useful for fragmentation calculation)
     rates = [entry['rate'] for entry in parser_object.get_calls_info()]
     slot_capacity = parser_object.get_slots_bandwidth()
-
-    # Instantiate metrics (will all be generated according to a 95% confidence interval)
     metrics = Metrics.Metrics(rates, slot_capacity, max_attempts)
 
-
     for interval in range(5):
-        #Load for this simulation round
         imposed_load = load
-
-        # Create the simulation environment
         env = simpy.Environment()
-
-
-        # Create Topology
         topology = TopologyBuilder.NetworkXGraphBuilder(XML_path, matrix_rows, matrix_cols)
-
-
-        # Create source -> Destination pairs according to normal distribution
         traffic_generator_object = TrafficGenerator.TrafficGenerator(XML_path, max_attempts, seed[interval])
-        num_pairs_to_generate = max_attempts
-        generated_pairs = traffic_generator_object.generate_pairs(num_pairs_to_generate)
-
-
-        #Create accompanying call-type normal distribution
-        num_call_types_dist = num_pairs_to_generate
-        call_types_dist = traffic_generator_object.generate_normal_distribution_call_types(num_call_types_dist)
-
-        # Create the Allocator process
-        allocator = Allocator.Allocator(env, max_attempts, traffic_generator_object, topology, generated_pairs, call_types_dist, verbose, imposed_load, metrics, seed[interval], interval) #Inicializa
-        env.process(allocator.allocation_process()) # Calls
-
-        # Run the simulation
+        generated_pairs = traffic_generator_object.generate_pairs(max_attempts)
+        call_types_dist = traffic_generator_object.generate_normal_distribution_call_types(max_attempts)
+        allocator = Allocator.Allocator(env, max_attempts, traffic_generator_object, topology, generated_pairs, call_types_dist, verbose, imposed_load, metrics, seed[interval], interval, use_multi_criteria, consider_crosstalk_threshold, region_finding_algorithm)
+        env.process(allocator.allocation_process())
         start_time = time.time()
         env.run()
         end_time = time.time()
-
-        # Calculate the total execution time
         execution_time = end_time - start_time
-
-        # Calculate the elapsed simulation time
         elapsed_simulation_time = env.now
 
-
-        #End of round calculations
         metrics.add_execution_time_of_round(execution_time)
         metrics.add_simulation_time_of_round(elapsed_simulation_time)
         metrics.calculate_end_of_simulation_round_fragmentation()
-        metrics.calculate_end_of_simulation_round_bbr(allocator.get_blocked_attempts())
+        metrics.calculate_end_of_simulation_round_bcr(allocator.get_blocked_attempts())
         metrics.calculate_end_of_simulation_round_CpS()
-        #Reset round_instance_specific data
+        metrics.calculate_end_of_simulation_round_crosstalk()
+        metrics.calculate_end_of_simulation_round_bbr(allocator.get_blocked_bandwidth(), allocator.get_successful_bandwidth())
         metrics.reset_roundwise_stats()
 
-    print(f"Mean execution time: {metrics.calculate_mean_execution_time_of_round():.2f} seconds")
-    print(f"Elapsed simulation time: {metrics.calculate_mean_simulation_time_of_round():.2f} seconds")
-
-    # final_frag, confidence = metrics.calculate_final_fragmentation_and_confidence_interval()
-    # logger.add_datapoint('fragmentation_FF.csv', load, final_frag, confidence)
-    # final_BBR, confidence = metrics.calculate_final_BBR_and_confidence()
-    # logger.add_datapoint('BBR_FF.csv', load, final_BBR, confidence)
-
+    results = {}
     for csv_file in csv_files:
         metric_name, algorithm = csv_file.split('_')
         method_name = f"calculate_final_{metric_name}_and_confidence_interval"
         method = getattr(metrics, method_name)
         final_metric, confidence = method()
-        logger.add_datapoint(csv_file, load, final_metric, confidence)
+        results[csv_file] = (final_metric, confidence)
+
+    return load, results
 
 
+def main():
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        futures = [executor.submit(run_simulation_for_load, load) for load in range(starting_load, final_load + 1, step)]
+        for future in concurrent.futures.as_completed(futures):
+            load, results = future.result()
+            for csv_file, (final_metric, confidence) in results.items():
+                logger.add_datapoint(csv_file, load, final_metric, confidence)
+            print(f"Completed simulation for load {load}")
+
+
+if __name__ == "__main__":
+    main()

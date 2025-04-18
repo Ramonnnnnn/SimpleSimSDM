@@ -1,0 +1,131 @@
+
+<flexgridsim version="0.4">
+    <rsa module="ImageRCSA"></rsa>
+    <trace file="trace.tr"></trace>
+    <traffic calls="10000" load="215" max-rate="1000">
+        <calls holding-time="1.0" rate="25" cos="1" weight="1"/>
+        <calls holding-time="1.0" rate="50" cos="1" weight="1"/>
+        <calls holding-time="1.0" rate="125" cos="1" weight="1"/>
+        <calls holding-time="1.0" rate="200" cos="1" weight="1"/>
+        <calls holding-time="1.0" rate="500" cos="1" weight="1"/>
+        <calls holding-time="1.0" rate="750" cos="1" weight="1"/>
+        <calls holding-time="1.0" rate="1000" cos="1" weight="1"/>
+    </traffic>
+    <virtual-topology name="MingcongYang"></virtual-topology>
+    <physical-topology name="MingcongYang" cores="7" slots="320" slotsBandwidth="12.5">
+        <nodes>
+            <node id="1"/>
+            <node id="2"/>
+            <node id="3"/>
+            <node id="4"/>
+            <node id="5"/>
+            <node id="6"/>
+            <node id="7"/>
+            <node id="8"/>
+            <node id="9"/>
+            <node id="10"/>
+            <node id="11"/>
+            <node id="12"/>
+            <node id="13"/>
+            <node id="14"/>
+            <node id="15"/>
+            <node id="16"/>
+            <node id="17"/>
+            <node id="18"/>
+            <node id="19"/>
+            <node id="20"/>
+            <node id="21"/>
+            <node id="22"/>
+            <node id="23"/>
+            <node id="24"/>
+            <node id="25"/>
+            <node id="26"/>
+            <node id="27"/>
+            <node id="28"/>
+        </nodes>
+        <links>
+            <!-- Links in both directions -->
+            <link id="0" source="1" destination="12" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="1" source="1" destination="27" delay="3.45" bandwidth="10000" weight="690" distance="690"/>
+            <link id="2" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="3" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="4" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="5" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="6" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="7" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="8" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="9" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="10" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="11" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="12" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="13" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="14" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="15" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="16" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="17" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="18" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="19" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="20" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+            <link id="" source="" destination="" delay="" bandwidth="10000" weight="" distance=""/>
+
+        </links>
+    </physical-topology>
+    <graphs>
+        <graph name="mbbr" dots-file="Image-graph-mbbr-nsf.dat"/>
+        <graph name="avgcrosstalk" dots-file="Image-graph-xt-nsf.dat"/>
+        <graph name="avgbps" dots-file="Image-graph-avgbps-nsf.dat"/>
+        <graph name="fragmentation" dots-file="Image-nsf-fragmentation.dat"/>
+        <graph name="modulation" dots-file="Image-nsf-modulation.dat"/>
+        <graph name="hops" dots-file="Image-nsf-hops.dat"/>
+        <graph name="hopsback" dots-file="Image-nsf-hopsback.dat"/>
+        <graph name="jfi" dots-file="Image-nsf-jfi.dat"/>
+        <graph name="xtps" dots-file="Image-nsf-xtps.dat"/>
+        <graph name="data" dots-file="Image-nsf-data.dat"/>
+        <graph name="ee" dots-file="Image-nsf-ee.dat"/>
+        <graph name="pc" dots-file="Image-nsf-pc.dat"/>
+    </graphs>
+</flexgridsim>
