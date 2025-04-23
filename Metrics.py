@@ -9,7 +9,7 @@ from collections import Counter
 
 class Metrics:
 
-    def __init__(self, call_rates, slot_capacity, total_attempts):
+    def __init__(self, call_rates, slot_capacity):
 
         self.call_rates = call_rates
         self.slot_capacity = slot_capacity
@@ -24,7 +24,6 @@ class Metrics:
 
         # For blocked call ratio use
         self.blockedcalls = 0
-        self.total_attempts = total_attempts
         self.bcr_of_every_round = []
 
         # For BBR use
@@ -184,8 +183,8 @@ class Metrics:
 
         return margin_of_error
 
-    def calculate_end_of_simulation_round_bcr(self, blocked_calls):
-        self.bcr_of_every_round.append((blocked_calls / self.total_attempts) * 100)
+    def calculate_end_of_simulation_round_bcr(self, blocked_calls, max_attempts):
+        self.bcr_of_every_round.append((blocked_calls / max_attempts) * 100)
 
     def calculate_final_BCR_and_confidence_interval(self):
         final_BCR = np.mean(self.bcr_of_every_round)

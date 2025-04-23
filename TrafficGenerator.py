@@ -2,9 +2,8 @@ import numpy as np
 import Parser
 
 class TrafficGenerator:
-    def __init__(self, XML_path, max_attempts, seed):
+    def __init__(self, XML_path, seed):
         self.XML_path = XML_path
-        self.max_attempts = max_attempts
         parser_object = Parser.XmlParser(XML_path)
         self.node_list = parser_object.get_nodes()
         self.call_info = parser_object.get_calls_info()
@@ -88,3 +87,20 @@ class TrafficGenerator:
 
     def get_slots_bandwidth(self):
         return self.slots_bandwidth
+
+    def generate_poisson_events(self, load_erlangs, average_holding_time, attempt_n_calls):
+        # Using offered load in E to calculate
+        call_arrival_rate = load_erlangs / average_holding_time
+        # Total (simulation) time duration will depend on the arrival rate and number of desired calls to be attempted
+        time_duration = attempt_n_calls / call_arrival_rate
+        # Calculated so that it is = to attempt_n_calls, the number of calls I want to exist in my simulation
+        num_events = np.random.poisson(call_arrival_rate * time_duration)
+        event_times = np.sort(np.random.uniform(0, time_duration, num_events))
+        inter_arrival_times = np.diff(event_times)
+        return num_events, event_times, inter_arrival_times, time_duration
+
+    def generate_call_durations(self, num_calls, mean_holding_time):
+        # Exponential distribution for call durations (holding times)
+        call_durations = np.random.exponential(scale=mean_holding_time, size=num_calls)
+        diff_call_durations = np.diff(call_durations)
+        return call_durations, diff_call_durations

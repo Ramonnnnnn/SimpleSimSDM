@@ -1,19 +1,16 @@
 # BEFORE SIMULATION:
 # CHECK NAME OF TOPOLOGY + CSVs (MAIN)
 # CHECK IF YOU WANT CROSSTALK (MAIN)
-# CEHCK IF YOU WANT MULTI-CRITERIA (MAIN) -> SEE HOW IT IS CALCULATED (TOPOLOGY > Set_edge_Custom_weight)
+# CHECK IF YOU WANT MULTI-CRITERIA (MAIN) -> SEE HOW IT IS CALCULATED (TOPOLOGY > Set_edge_Custom_weight)
 # CHECK ALLOCATION ALGORITHM (MAIN) -> to add, go to allocator
 # name convention: metric_algorithm.csv
 # metric name MUST be same as method name for final calculations
 # metrics available: "BBR", "fragmentation" & "CpS"
 
 
-#IMPLEMENTATION IDEAS
+# IMPLEMENTATION IDEAS
 #   BETTER SEED IMPLEMENTATION
 #   Log: include hops, ee.
-
-
-
 import os
 import simpy
 import time
@@ -24,7 +21,7 @@ import Metrics
 import Logger
 import Parser
 import concurrent.futures
-import math
+
 
 # Simulation parameters
 matrix_rows = 7
@@ -32,15 +29,16 @@ matrix_cols = 320
 max_attempts = 10000
 verbose = False
 seed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-starting_load = 50
+starting_load = 450
 final_load = 600
 step = 25
 use_multi_criteria = True
 consider_crosstalk_threshold = True
-region_finding_algorithm = "MMM" # FF BF MMM MF   ###
+region_finding_algorithm = "MMM"  # FF BF MMM MF   ###
 
 base_dir = os.path.dirname(__file__)
-csv_files = ['BBR_ONE5050(NSF.newest).csv', 'fragmentation_ONE5050(NSF.newest).csv', 'CpS_ONE5050(NSF.newest).csv', 'BCR_ONE5050(NSF.newest).csv', 'crosstalk_ONE5050(NSF.newest).csv']
+algorithm_name = "ONE5050(NSF.poisson)"
+csv_files = [f"BBR_{algorithm_name}.csv", f"fragmentation_{algorithm_name}.csv", f"CpS_{algorithm_name}.csv", f"BCR_{algorithm_name}.csv", f"crosstalk_{algorithm_name}.csv"]
 csv_save_folder = os.path.join(base_dir, "CVSs")
 logger = Logger.Logger(csv_save_folder, csv_files)
 XML_path = os.path.join(base_dir, "xml/Image-nsf.xml")
@@ -51,16 +49,20 @@ def run_simulation_for_load(load):
     parser_object = Parser.XmlParser(XML_path)
     rates = [entry['rate'] for entry in parser_object.get_calls_info()]
     slot_capacity = parser_object.get_slots_bandwidth()
-    metrics = Metrics.Metrics(rates, slot_capacity, max_attempts)
+    metrics = Metrics.Metrics(rates, slot_capacity)
 
     for interval in range(5):
         imposed_load = load
         env = simpy.Environment()
         topology = TopologyBuilder.NetworkXGraphBuilder(XML_path, matrix_rows, matrix_cols)
-        traffic_generator_object = TrafficGenerator.TrafficGenerator(XML_path, max_attempts, seed[interval])
-        generated_pairs = traffic_generator_object.generate_pairs(max_attempts)
-        call_types_dist = traffic_generator_object.generate_normal_distribution_call_types(max_attempts)
-        allocator = Allocator.Allocator(env, max_attempts, traffic_generator_object, topology, generated_pairs, call_types_dist, verbose, imposed_load, metrics, seed[interval], interval, use_multi_criteria, consider_crosstalk_threshold, region_finding_algorithm)
+        traffic_generator_object = TrafficGenerator.TrafficGenerator(XML_path, seed[interval])
+        mean_holding_time = traffic_generator_object.get_mean_holding_time()
+        num_events, event_times, inter_arrival_times, _ = traffic_generator_object.generate_poisson_events(imposed_load, mean_holding_time, max_attempts)
+        max_attempts2 = len(inter_arrival_times)  # NP Poisson implementation does not result in exact number == max attempts.
+        call_duration_distribution, _ = traffic_generator_object.generate_call_durations(max_attempts2+1, mean_holding_time)
+        generated_pairs = traffic_generator_object.generate_pairs(max_attempts2)
+        call_types_dist = traffic_generator_object.generate_normal_distribution_call_types(max_attempts2)
+        allocator = Allocator.Allocator(env, max_attempts2, traffic_generator_object, topology, generated_pairs, call_types_dist, inter_arrival_times, call_duration_distribution, verbose, imposed_load, metrics, seed[interval], interval, use_multi_criteria, consider_crosstalk_threshold, region_finding_algorithm)
         env.process(allocator.allocation_process())
         start_time = time.time()
         env.run()
@@ -71,7 +73,7 @@ def run_simulation_for_load(load):
         metrics.add_execution_time_of_round(execution_time)
         metrics.add_simulation_time_of_round(elapsed_simulation_time)
         metrics.calculate_end_of_simulation_round_fragmentation()
-        metrics.calculate_end_of_simulation_round_bcr(allocator.get_blocked_attempts())
+        metrics.calculate_end_of_simulation_round_bcr(allocator.get_blocked_attempts(), allocator.get_max_attempts())
         metrics.calculate_end_of_simulation_round_CpS()
         metrics.calculate_end_of_simulation_round_crosstalk()
         metrics.calculate_end_of_simulation_round_bbr(allocator.get_blocked_bandwidth(), allocator.get_successful_bandwidth())
