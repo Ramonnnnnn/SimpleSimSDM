@@ -16,7 +16,7 @@ import MF
 import FcaRcsa
 
 class Allocator:
-    def __init__(self, env, max_attempts, traffic_generator_obj, topology, s_d_distribution, call_type_distribution,
+    def __init__(self, env, max_attempts, traffic_generator_obj, topology, s_d_distribution, call_type_distribution, inter_arrival_time_distribution, call_duration_distribution,
                  verbose, imposed_load, metrics, seed, interval, use_multi_criteria, consider_crosstalk_threshold, region_finding_algorithm):
         # Env
         self.env = env
@@ -29,6 +29,7 @@ class Allocator:
 
         # Number of simulations per_round
         self.max_attempts = max_attempts  # usually 10.000
+        # Load in erlangs
         self.imposed_load = imposed_load  # set parameter
 
         # Statistics
@@ -43,6 +44,7 @@ class Allocator:
         self.call_info = traffic_generator_obj.get_call_info()
         self.traffic_info = traffic_generator_obj.get_traffic_info()
 
+
         # Topology
         self.topology = topology
         self.graph = topology.get_graph()
@@ -55,8 +57,10 @@ class Allocator:
         # Distributions
         self.generated_pairs = s_d_distribution
         self.num_call_types_dist = call_type_distribution
+        self.inter_arrival_time_distribution = inter_arrival_time_distribution
+        self.call_duration_distribution = call_duration_distribution
         # scale: average time between calls || size: number of samples
-        self.time_between_calls = np.random.default_rng().exponential(scale=4, size=self.max_attempts)
+        self.time_between_calls = np.random.default_rng().exponential(scale=4, size=self.max_attempts) #Soon to deprecated
 
         # Calculations
         load = imposed_load
@@ -64,7 +68,8 @@ class Allocator:
         mean_rate = traffic_generator_obj.get_mean_rate()  # Sum(rate * (weight/total_weight)) '' ''
         max_rate = traffic_generator_obj.get_max_rate()  # Max_rate parameter of the XML
 
-        self.mean_arrival_time = (mean_holding_time * (mean_rate / max_rate)) / load
+
+        #self.mean_arrival_time = (mean_holding_time * (mean_rate / max_rate)) / load #Soon to be deprecated
 
         # METRICS
         self.metrics = metrics
@@ -95,12 +100,9 @@ class Allocator:
         if attempt % 1 == 0:
             self.metrics.mean_frag_topology(self.topology.get_all_edge_matrices())
             self.metrics.mean_CpS_topology(self.topology.get_all_edge_matrices())
-
             # single load progress bar:
-            InterfaceTerminal.InterfaceTerminal.print_progress_bar(attempt, self.max_attempts,
-                                                                   prefix=f'Simulation Progress: Load={self.imposed_load}, Interval={self.interval}',
-                                                                   suffix='', length=50)
-
+            InterfaceTerminal.InterfaceTerminal.print_progress_bar(attempt, self.max_attempts, prefix=f'Simulation Progress: Load={self.imposed_load}, Interval={self.interval}', suffix='', length=50)
+        # Measure crosstalk
         self.metrics.mean_crosstalk_topology(self.topology.get_all_crosstalk_edge_matrices())
 
         if self.verbose:
@@ -194,26 +196,12 @@ class Allocator:
                     self.allocate_along_path(shortest_paths[i], region, demanded_slots, modulation, attempt)
                     successful = True
                     self.successful_bandwidth += rate
-                    # self.modulation_histogram.append(modulation)
-                    # self.path_length_histogram.append(self.metrics.distance_mask_for_histogram(distance))
-                    # self.served_nodes.append(self.generated_pairs[attempt][1])
-                    #if attempt == self.max_attempts-1:
-                    #     self.metrics.save_modulation_histogram(self.modulation_histogram, "/Users/ramonoliveira/Desktop/CG - Relatório 3D/SimpleSIm/histogram", self.imposed_load, 1)
-                    #     self.metrics.save_modulation_histogram(self.denied_modulation_histogram, "/Users/ramonoliveira/Desktop/CG - Relatório 3D/SimpleSIm/histogram",self.imposed_load, 0)
-                    #     self.metrics.save_path_lenght_histogram(self.path_length_histogram,"/Users/ramonoliveira/Desktop/CG - Relatório 3D/SimpleSIm/histogram", self.imposed_load, 1)
-                    #     self.metrics.save_path_lenght_histogram(self.denied_path_length_histogram, "/Users/ramonoliveira/Desktop/CG - Relatório 3D/SimpleSIm/histogram", self.imposed_load, 0)
-                    #     self.metrics.calculate_success_percentage(self.served_nodes, self.denied_nodes, self.imposed_load)
-                    deallocate_time = abs(random.normalvariate(mu=1, sigma=1))  # Time to remain allocated -> change later
-                    self.env.process(self.deallocate_slots(shortest_paths[i], region, demanded_slots, deallocate_time, attempt,modulation))
+                    self.env.process(self.deallocate_slots(shortest_paths[i], region, demanded_slots, self.call_duration_distribution[attempt], attempt,modulation))
                     break
             if successful:
                 break
 
         if not successful:
-            # print(f"Blocked attempt at allocating: {demanded_slots} slots")
-            # self.denied_modulation_histogram.append(modulation)
-            # self.denied_path_length_histogram.append(self.metrics.distance_mask_for_histogram(distance))
-            # self.denied_nodes.append(self.generated_pairs[attempt][1])
             self.blocked_attempts += 1
             self.blocked_bandwidth += rate
 
@@ -229,12 +217,13 @@ class Allocator:
 
         while attempt < self.max_attempts:
             # Time distribution to initiate calls
-            yield self.env.timeout(-1 * (self.mean_arrival_time * math.log(random.uniform(0.0, 1.0))))
+            yield self.env.timeout(self.inter_arrival_time_distribution[attempt])
             self.allocate_slots(attempt)
             attempt += 1
 
     def allocate_along_path(self, shortest_path_i, region, demanded_slots, modulation, lightpath_ID):
 
+        #print(f"Time as allocation is made: {self.env.now}, ID: {lightpath_ID}")
         # Iterate over pairs of nodes in the path
         affected_lightpath_ids = []
         for i in range(len(shortest_path_i) - 1):
@@ -295,7 +284,7 @@ class Allocator:
         return aux
 
     def deallocate_along_path(self, shortest_path_i, region, demanded_slots, modulation, lightpath_ID):
-
+        #print(f"Time as deallocation is made: {self.env.now}, ID: {lightpath_ID}")
         # Iterate over pairs of nodes in the path
         affected_lightpath_ids = []
         for i in range(len(shortest_path_i) - 1):
@@ -435,3 +424,11 @@ class Allocator:
             6: [0, 1, 2, 3, 4, 5]
         }
         return neighbors_map.get(core, [])
+
+    def get_max_attempts(self):
+        return self.max_attempts
+
+
+
+
+
