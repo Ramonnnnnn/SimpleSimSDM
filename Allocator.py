@@ -1,10 +1,5 @@
-import random
 import numpy as np
-import TopologyBuilder
-import Parser
 from Modulation import Modulation
-import math
-import Metrics
 import InterfaceTerminal
 import LightPath
 
@@ -15,9 +10,16 @@ import MMM
 import MF
 import FcaRcsa
 
+
+# Reinforcement Learning Resources
+# from stable_baselines3 import PPO
+
+
 class Allocator:
-    def __init__(self, env, max_attempts, traffic_generator_obj, topology, s_d_distribution, call_type_distribution, inter_arrival_time_distribution, call_duration_distribution,
-                 verbose, imposed_load, metrics, seed, interval, use_multi_criteria, consider_crosstalk_threshold, region_finding_algorithm):
+    def __init__(self, env, max_attempts, traffic_generator_obj, topology, s_d_distribution, call_type_distribution,
+                 inter_arrival_time_distribution, call_duration_distribution,
+                 verbose, imposed_load, metrics, seed, interval, use_multi_criteria, consider_crosstalk_threshold,
+                 region_finding_algorithm, rl_environment, trained_model_path, max_episode_length, total_timesteps):
         # Env
         self.env = env
         self.verbose = verbose
@@ -44,7 +46,6 @@ class Allocator:
         self.call_info = traffic_generator_obj.get_call_info()
         self.traffic_info = traffic_generator_obj.get_traffic_info()
 
-
         # Topology
         self.topology = topology
         self.graph = topology.get_graph()
@@ -60,14 +61,14 @@ class Allocator:
         self.inter_arrival_time_distribution = inter_arrival_time_distribution
         self.call_duration_distribution = call_duration_distribution
         # scale: average time between calls || size: number of samples
-        self.time_between_calls = np.random.default_rng().exponential(scale=4, size=self.max_attempts) #Soon to deprecated
+        self.time_between_calls = np.random.default_rng().exponential(scale=4,
+                                                                      size=self.max_attempts)  #Soon to deprecated
 
         # Calculations
         load = imposed_load
         mean_holding_time = traffic_generator_obj.get_mean_holding_time()  # Sum(holding_time * (weight/total_weight)) p/ for every call type.
         mean_rate = traffic_generator_obj.get_mean_rate()  # Sum(rate * (weight/total_weight)) '' ''
         max_rate = traffic_generator_obj.get_max_rate()  # Max_rate parameter of the XML
-
 
         #self.mean_arrival_time = (mean_holding_time * (mean_rate / max_rate)) / load #Soon to be deprecated
 
@@ -94,6 +95,26 @@ class Allocator:
         self.served_nodes = []
         self.denied_nodes = []
 
+
+
+        if self.region_finding_algorithm == "reinforcement_agent_test":
+            from stable_baselines3 import PPO
+            # RL Testing variable
+            self.spectrum_current_attempt = None
+            self.demanded_slots_current_attempt = None
+            self.rl_list_of_regions = {} # Empty dict - Legacy format
+            # Check environment
+            if rl_environment == "Tetris1":
+                from TetrisResourceAllocation import TetrisResourceAllocation  # Change training to testing approach
+                self.rl_env = TetrisResourceAllocation(cores=7, slots=320, max_episode_length=max_episode_length, total_timesteps=total_timesteps, reference_to_allocator=self)
+                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=False)  # calls step n_steps times
+            if rl_environment == "Tetris3":
+                from TetrisResourceAllocation3 import TetrisResourceAllocation  # Change training to testing approach
+                self.rl_env = TetrisResourceAllocation(cores=7, slots=320, max_episode_length=max_episode_length, total_timesteps=total_timesteps, reference_to_allocator=self)
+                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=False)  # calls step n_steps times
+            else:
+                raise KeyError("Environment not found!")
+
     # Does the heavy lifting: Source, destination,
     def allocate_slots(self, attempt):
         # Should calculate periodic statistics
@@ -101,7 +122,9 @@ class Allocator:
             self.metrics.mean_frag_topology(self.topology.get_all_edge_matrices())
             self.metrics.mean_CpS_topology(self.topology.get_all_edge_matrices())
             # single load progress bar:
-            InterfaceTerminal.InterfaceTerminal.print_progress_bar(attempt, self.max_attempts, prefix=f'Simulation Progress: Load={self.imposed_load}, Interval={self.interval}', suffix='', length=50)
+            InterfaceTerminal.InterfaceTerminal.print_progress_bar(attempt, self.max_attempts,
+                                                                   prefix=f'Simulation Progress: Load={self.imposed_load}, Interval={self.interval}',
+                                                                   suffix='', length=50)
         # Measure crosstalk
         self.metrics.mean_crosstalk_topology(self.topology.get_all_crosstalk_edge_matrices())
 
@@ -125,9 +148,6 @@ class Allocator:
             # Sort paths according to their fragmentation
             shortest_paths = self.rank_paths_by_fragmentation(shortest_paths)
 
-
-
-
         self.calls_made += 1
         for i in range(len(shortest_paths)):
             # Modulation and demand
@@ -139,7 +159,8 @@ class Allocator:
             if modulation == -1:
                 continue  # Skip to the next path if modulation is -1
 
-            bandwidth = modulation_instance.get_bandwidth(modulation)  # The shorter the distance, the larger is the bandwidth (up to 75.0)
+            bandwidth = modulation_instance.get_bandwidth(
+                modulation)  # The shorter the distance, the larger is the bandwidth (up to 75.0)
             demanded_slots = int(rate / bandwidth)
             if demanded_slots == 0:
                 demanded_slots = 1
@@ -147,9 +168,14 @@ class Allocator:
             # Spectrum
 
             if self.consider_crosstalk_threshold:
-                available_spectrum = self.topology.precise_slot_xt_available_spectrum_seven_core_MCF(shortest_paths[i], modulation)
+                available_spectrum = self.topology.precise_slot_xt_available_spectrum_seven_core_MCF(shortest_paths[i],
+                                                                                                     modulation)
             else:
                 available_spectrum = self.topology.or_matrices_along_path(shortest_paths[i])
+
+            # Store spectrum to be retrieved by RL model
+            self.spectrum_current_attempt = available_spectrum
+            self.demanded_slots_current_attempt = demanded_slots
 
             if self.region_finding_algorithm == 'FF':
                 # Region-Finding-Algorithm
@@ -173,8 +199,17 @@ class Allocator:
                 fca_rcsa = FcaRcsa.FcaRcsa(available_spectrum, demanded_slots)
                 fca_rcsa.frag_coef_rcsa()
                 list_of_allocable_regions = fca_rcsa.output_dict()
-            # elif self.region_finding_algorithm == "reinforcement":
-            #     #CODE
+            elif self.region_finding_algorithm == "reinforcement_agent_test":
+                state, info = self.rl_env.reset()  # Reset once at the start
+
+                done = False
+                while not done:  # Keep predicting until allocation is complete
+                    action = self.model.predict(state)
+                    _, _, done, done, _ = self.rl_env.step(action)  # Step until done
+                # Retrieve the updated dictionary of allocable regions
+                list_of_allocable_regions = self.rl_list_of_regions
+                #print("breakpoint")
+
             else:
                 raise KeyError(f"Region finding algorithm:  {self.region_finding_algorithm} not recognized.")
 
@@ -196,7 +231,9 @@ class Allocator:
                     self.allocate_along_path(shortest_paths[i], region, demanded_slots, modulation, attempt)
                     successful = True
                     self.successful_bandwidth += rate
-                    self.env.process(self.deallocate_slots(shortest_paths[i], region, demanded_slots, self.call_duration_distribution[attempt], attempt,modulation))
+                    self.env.process(self.deallocate_slots(shortest_paths[i], region, demanded_slots,
+                                                           self.call_duration_distribution[attempt], attempt,
+                                                           modulation))
                     break
             if successful:
                 break
@@ -223,7 +260,7 @@ class Allocator:
 
     def allocate_along_path(self, shortest_path_i, region, demanded_slots, modulation, lightpath_ID):
 
-        #print(f"Time as allocation is made: {self.env.now}, ID: {lightpath_ID}")
+        #print(f"Time as allocation is made: {self.env.now}, ID: {lightpath_ID}, env.now: {self.env.now}")
         # Iterate over pairs of nodes in the path
         affected_lightpath_ids = []
         for i in range(len(shortest_path_i) - 1):
@@ -247,9 +284,9 @@ class Allocator:
                     # Include affected light paths for future update
                     neighbors = self.figure_neighbors_seven_core_MCF(row)
                     for nei in neighbors:
-                        if lightpath_matrix[nei][col] != -1 and lightpath_matrix[nei][col] not in affected_lightpath_ids:
+                        if lightpath_matrix[nei][col] != -1 and lightpath_matrix[nei][
+                            col] not in affected_lightpath_ids:
                             affected_lightpath_ids.append(lightpath_matrix[nei][col])
-
 
             # Update in the topology
             self.topology.update_matrix_in_topology(src, dst, edge_matrix_path)
@@ -259,10 +296,14 @@ class Allocator:
 
         if self.consider_crosstalk_threshold:
             # Write new XT values for allocated path.
-            self.topology.calculate_and_set_max_XT_for_lightpath_seven_core_MCF(self.lightpath_manager.get_attribute(lightpath_ID, "path"), self.lightpath_manager.get_attribute(lightpath_ID, "occupied_slot_list"))
+            self.topology.calculate_and_set_max_XT_for_lightpath_seven_core_MCF(
+                self.lightpath_manager.get_attribute(lightpath_ID, "path"),
+                self.lightpath_manager.get_attribute(lightpath_ID, "occupied_slot_list"))
             # Update affected light paths
             for lp_id in affected_lightpath_ids:
-                self.topology.calculate_and_set_max_XT_for_lightpath_seven_core_MCF(self.lightpath_manager.get_attribute(lp_id, "path"), self.lightpath_manager.get_attribute(lp_id, "occupied_slot_list"))
+                self.topology.calculate_and_set_max_XT_for_lightpath_seven_core_MCF(
+                    self.lightpath_manager.get_attribute(lp_id, "path"),
+                    self.lightpath_manager.get_attribute(lp_id, "occupied_slot_list"))
 
         if self.use_multi_criteria == True:
             for i in range(len(shortest_path_i) - 1):
@@ -275,7 +316,8 @@ class Allocator:
                 # update_weight
                 self.topology.set_edge_custom_weight(src, dst)
 
-    def count_occ_neighbors(self, matrix, neighbor_core1, neighbor_core2, slot):
+    @staticmethod
+    def count_occ_neighbors(matrix, neighbor_core1, neighbor_core2, slot):
         aux = 0
         if matrix[neighbor_core1][slot] == 1:
             aux += 1
@@ -284,7 +326,7 @@ class Allocator:
         return aux
 
     def deallocate_along_path(self, shortest_path_i, region, demanded_slots, modulation, lightpath_ID):
-        #print(f"Time as deallocation is made: {self.env.now}, ID: {lightpath_ID}")
+        # print(f"Time as deallocation is made: {self.env.now}, ID: {lightpath_ID}, env.now: {self.env.now}")
         # Iterate over pairs of nodes in the path
         affected_lightpath_ids = []
         for i in range(len(shortest_path_i) - 1):
@@ -307,13 +349,13 @@ class Allocator:
                 if self.consider_crosstalk_threshold:
                     modulation_matrix[row][col] = -1
                     lightpath_matrix[row][col] = -1
-                    noise_matrix[row][col] = -61.93 #Write base values directly
+                    noise_matrix[row][col] = -61.93  #Write base values directly
                     # Include affected lightpaths for future update
                     neighbors = self.figure_neighbors_seven_core_MCF(row)
                     for nei in neighbors:
-                        if lightpath_matrix[nei][col] != -1 and lightpath_matrix[nei][col] not in affected_lightpath_ids:
+                        if lightpath_matrix[nei][col] != -1 and lightpath_matrix[nei][
+                            col] not in affected_lightpath_ids:
                             affected_lightpath_ids.append(lightpath_matrix[nei][col])
-
 
             # Update in the topology (before moving to next link)
             self.topology.update_matrix_in_topology(src, dst, edge_matrix_path)
@@ -326,7 +368,9 @@ class Allocator:
             self.lightpath_manager.remove_lightpath(lightpath_ID)
             # Update affected light paths
             for lp_id in affected_lightpath_ids:
-                self.topology.calculate_and_set_max_XT_for_lightpath_seven_core_MCF(self.lightpath_manager.get_attribute(lp_id, "path"), self.lightpath_manager.get_attribute(lp_id,"occupied_slot_list"))
+                self.topology.calculate_and_set_max_XT_for_lightpath_seven_core_MCF(
+                    self.lightpath_manager.get_attribute(lp_id, "path"),
+                    self.lightpath_manager.get_attribute(lp_id, "occupied_slot_list"))
 
         if self.use_multi_criteria:
             for i in range(len(shortest_path_i) - 1):
@@ -338,7 +382,6 @@ class Allocator:
                 self.topology.set_edge_fragmentation(src, dst)
                 # update_weight
                 self.topology.set_edge_custom_weight(src, dst)
-
 
     def rank_paths_by_fragmentation(self, shortest_paths):
         fragmentation_scores = []
@@ -366,10 +409,10 @@ class Allocator:
         for core in range(cores):
             size_frag = 0
             for slot in range(slots):
-                while not matrix[core][slot] and slot <= slots-2:
+                while not matrix[core][slot] and slot <= slots - 2:
                     size_frag += 1
                     total_free_slots += 1
-                    slot +=1
+                    slot += 1
 
                 if size_frag >= largest_frag:
                     largest_frag = size_frag
@@ -399,6 +442,7 @@ class Allocator:
 
     def get_successful_bandwidth(self):
         return self.successful_bandwidth
+
     @staticmethod
     def figure_neighbors(core, total_cores):
         if core == 0:
@@ -427,8 +471,3 @@ class Allocator:
 
     def get_max_attempts(self):
         return self.max_attempts
-
-
-
-
-

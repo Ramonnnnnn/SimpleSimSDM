@@ -27,17 +27,25 @@ import concurrent.futures
 matrix_rows = 7
 matrix_cols = 320
 max_attempts = 10000
+rounds_per_load = 5
 verbose = False
 seed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-starting_load = 450
-final_load = 600
+starting_load = 1000
+final_load = 2000
 step = 25
-use_multi_criteria = True
+use_multi_criteria = False
 consider_crosstalk_threshold = True
-region_finding_algorithm = "MMM"  # FF BF MMM MF   ###
+region_finding_algorithm = "fca_rcsa"  # FF BF MMM MF fca_rcsa   ###
+rl_environment = "No" #Tetris1, Tetris3 #
+max_episode_length = matrix_rows * matrix_cols
+total_timesteps = matrix_rows * matrix_cols * max_attempts
+trained_model_path = "no"
 
 base_dir = os.path.dirname(__file__)
-algorithm_name = "ONE5050(NSF.poisson)"
+algorithm_name = "fca.rcsa(test10k)"
+if "_" in algorithm_name:
+    raise KeyError(f"Can't put _ on algorithm name")
+
 csv_files = [f"BBR_{algorithm_name}.csv", f"fragmentation_{algorithm_name}.csv", f"CpS_{algorithm_name}.csv", f"BCR_{algorithm_name}.csv", f"crosstalk_{algorithm_name}.csv"]
 csv_save_folder = os.path.join(base_dir, "CVSs")
 logger = Logger.Logger(csv_save_folder, csv_files)
@@ -51,7 +59,7 @@ def run_simulation_for_load(load):
     slot_capacity = parser_object.get_slots_bandwidth()
     metrics = Metrics.Metrics(rates, slot_capacity)
 
-    for interval in range(5):
+    for interval in range(rounds_per_load):
         imposed_load = load
         env = simpy.Environment()
         topology = TopologyBuilder.NetworkXGraphBuilder(XML_path, matrix_rows, matrix_cols)
@@ -62,13 +70,14 @@ def run_simulation_for_load(load):
         call_duration_distribution, _ = traffic_generator_object.generate_call_durations(max_attempts2+1, mean_holding_time)
         generated_pairs = traffic_generator_object.generate_pairs(max_attempts2)
         call_types_dist = traffic_generator_object.generate_normal_distribution_call_types(max_attempts2)
-        allocator = Allocator.Allocator(env, max_attempts2, traffic_generator_object, topology, generated_pairs, call_types_dist, inter_arrival_times, call_duration_distribution, verbose, imposed_load, metrics, seed[interval], interval, use_multi_criteria, consider_crosstalk_threshold, region_finding_algorithm)
+        allocator = Allocator.Allocator(env, max_attempts2, traffic_generator_object, topology, generated_pairs, call_types_dist, inter_arrival_times, call_duration_distribution, verbose, imposed_load, metrics, seed[interval], interval, use_multi_criteria, consider_crosstalk_threshold, region_finding_algorithm, rl_environment, trained_model_path, max_episode_length, total_timesteps)
         env.process(allocator.allocation_process())
         start_time = time.time()
         env.run()
         end_time = time.time()
         execution_time = end_time - start_time
         elapsed_simulation_time = env.now
+        print(f"Mean: {mean_holding_time}")
 
         metrics.add_execution_time_of_round(execution_time)
         metrics.add_simulation_time_of_round(elapsed_simulation_time)
