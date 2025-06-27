@@ -105,13 +105,17 @@ class Allocator:
             self.rl_list_of_regions = {} # Empty dict - Legacy format
             # Check environment
             if rl_environment == "Tetris1":
-                from TetrisResourceAllocation import TetrisResourceAllocation  # Change training to testing approach
+                from rl_environments.TetrisResourceAllocation import TetrisResourceAllocation  # Change training to testing approach
                 self.rl_env = TetrisResourceAllocation(cores=7, slots=320, max_episode_length=max_episode_length, total_timesteps=total_timesteps, reference_to_allocator=self)
-                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=False)  # calls step n_steps times
-            if rl_environment == "Tetris3":
-                from TetrisResourceAllocation3 import TetrisResourceAllocation  # Change training to testing approach
+                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=True)  # calls step n_steps times
+            elif rl_environment == "Tetris3":
+                from rl_environments.TetrisResourceAllocation3 import TetrisResourceAllocation  # Change training to testing approach
                 self.rl_env = TetrisResourceAllocation(cores=7, slots=320, max_episode_length=max_episode_length, total_timesteps=total_timesteps, reference_to_allocator=self)
-                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=False)  # calls step n_steps times
+                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=True)  # calls step n_steps times
+            elif rl_environment == "Tetris4_v4":
+                from rl_environments.TetrisResourceAllocation4 import TetrisResourceAllocation  # Change training to testing approach
+                self.rl_env = TetrisResourceAllocation(cores=7, slots=320, max_episode_length=max_episode_length, total_timesteps=total_timesteps, reference_to_allocator=self)
+                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=True)  # calls step n_steps times
             else:
                 raise KeyError("Environment not found!")
 

@@ -27,27 +27,26 @@ import concurrent.futures
 matrix_rows = 7
 matrix_cols = 320
 max_attempts = 10000
-rounds_per_load = 5
+rounds_per_load = 8
 verbose = False
 seed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-starting_load = 1000
-final_load = 2000
+starting_load = 700
+final_load = 1600
 step = 25
-use_multi_criteria = False
+use_multi_criteria = True
 consider_crosstalk_threshold = True
-region_finding_algorithm = "fca_rcsa"  # FF BF MMM MF fca_rcsa   ###
-rl_environment = "No" #Tetris1, Tetris3 #
+region_finding_algorithm = "FF"  # FF BF MMM MF fca_rcsa reinforcement_agent_test  ###
+rl_environment = "na" #Tetris1, Tetris3 #
 max_episode_length = matrix_rows * matrix_cols
 total_timesteps = matrix_rows * matrix_cols * max_attempts
-trained_model_path = "no"
-
+trained_model_path = "na"
 base_dir = os.path.dirname(__file__)
-algorithm_name = "fca.rcsa(test10k)"
-if "_" in algorithm_name:
-    raise KeyError(f"Can't put _ on algorithm name")
+log_name = "FF(mc)2"
+if "_" in log_name:
+    raise KeyError(f"Can't put _ or .csv on log name")
 
-csv_files = [f"BBR_{algorithm_name}.csv", f"fragmentation_{algorithm_name}.csv", f"CpS_{algorithm_name}.csv", f"BCR_{algorithm_name}.csv", f"crosstalk_{algorithm_name}.csv"]
-csv_save_folder = os.path.join(base_dir, "CVSs")
+csv_files = [f"BBR_{log_name}.csv", f"fragmentation_{log_name}.csv", f"CpS_{log_name}.csv", f"BCR_{log_name}.csv", f"crosstalk_{log_name}.csv"]
+csv_save_folder = os.path.join(base_dir, "CSVs")
 logger = Logger.Logger(csv_save_folder, csv_files)
 XML_path = os.path.join(base_dir, "xml/Image-nsf.xml")
 
