@@ -24,5 +24,5 @@ def print_columns_as_arrays(filename):
 
 
 # Replace 'your_file.csv' with your actual file name
-filename = 'crosstalk_fca(USA.newest).csv'
+filename = 'BBR_tetris3(test10k).csv'
 print_columns_as_arrays(filename)
