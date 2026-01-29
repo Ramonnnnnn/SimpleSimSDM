@@ -116,6 +116,26 @@ class Allocator:
                 from rl_environments.TetrisResourceAllocation4 import TetrisResourceAllocation  # Change training to testing approach
                 self.rl_env = TetrisResourceAllocation(cores=7, slots=320, max_episode_length=max_episode_length, total_timesteps=total_timesteps, reference_to_allocator=self)
                 self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=True)  # calls step n_steps times
+            elif rl_environment == "Tetris5":
+                from rl_environments.TetrisResourceAllocation5 import TetrisResourceAllocation
+                self.rl_env = TetrisResourceAllocation(cores=7, slots=320, max_episode_length=max_episode_length, total_timesteps=total_timesteps, reference_to_allocator=self)
+                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=True)  # calls step n_steps times
+            elif rl_environment == "Tetris5v2.5":
+                from rl_environments.TetrisResourceAllocation5_v2_5 import TetrisResourceAllocation
+                self.rl_env = TetrisResourceAllocation(cores=7, slots=320, max_episode_length=max_episode_length, total_timesteps=total_timesteps, reference_to_allocator=self)
+                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=True)  # calls step n_steps times
+            elif rl_environment == "Tetris6":
+                from rl_environments.TetrisResourceAllocation6 import TetrisResourceAllocation
+                self.rl_env = TetrisResourceAllocation(cores=7, slots=320, max_episode_length=max_episode_length, total_timesteps=total_timesteps, reference_to_allocator=self)
+                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=True)  # calls step n_steps times
+            elif rl_environment == "Tetris6.1":
+                from rl_environments.TetrisResourceAllocation6_1 import TetrisResourceAllocation
+                self.rl_env = TetrisResourceAllocation(cores=7, slots=320, max_episode_length=max_episode_length, total_timesteps=total_timesteps, reference_to_allocator=self)
+                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=True)  # calls step n_steps times
+            elif rl_environment == "Tetris7":
+                from rl_environments.TetrisResourceAllocation7 import TetrisResourceAllocation
+                self.rl_env = TetrisResourceAllocation(cores=7, slots=320, max_episode_length=max_episode_length, total_timesteps=total_timesteps, reference_to_allocator=self)
+                self.model = PPO.load(trained_model_path, env=self.rl_env, deterministic=True)  # calls step n_steps times
             else:
                 raise KeyError("Environment not found!")
 
@@ -208,11 +228,11 @@ class Allocator:
 
                 done = False
                 while not done:  # Keep predicting until allocation is complete
-                    action = self.model.predict(state)
+                    action, _ = self.model.predict(state)
                     _, _, done, done, _ = self.rl_env.step(action)  # Step until done
                 # Retrieve the updated dictionary of allocable regions
                 list_of_allocable_regions = self.rl_list_of_regions
-                #print("breakpoint")
+                # print("breakpoint")
 
             else:
                 raise KeyError(f"Region finding algorithm:  {self.region_finding_algorithm} not recognized.")

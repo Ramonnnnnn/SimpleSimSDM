@@ -14,8 +14,13 @@ class TetrisResourceAllocation(gym.Env):
     ''' In this environment, every episode attempts to solve allocation for a unique link, i.e., there is no continuity as in
     regular packing approaches. So, episode_i will be entirely devoted to finding the best position for light-path_i to be
     placed in the spectrum for path_i.  '''
-    def __init__(self, cores, slots, max_episode_length, total_timesteps):
+    def __init__(self, cores, slots, max_episode_length, total_timesteps, reference_to_allocator):
         super(TetrisResourceAllocation, self).__init__()
+
+        # ADD TO TEST -> Remove plotting. Only necessary in training
+        self.demanded_slots_int = None # ADD TO TEST
+        self.demanded_slots = None # ADD TO TEST
+        self.allocator = reference_to_allocator # ADD TO TEST
 
         # Spectrum Dimension
         self.candidate_pivot = None
@@ -67,12 +72,14 @@ class TetrisResourceAllocation(gym.Env):
         # Counter (resets for episode)
         self.this_episodes_timestep = 0
         # Get new spectrum
-        self.spectrum = self.generate_blocky_binary_matrix(self.cores, self.slots, max_fill_prob=0.5, max_attempts=300) #Generates episode's matrix
-        self.spectrum[0][0] = 1 #No longer will randomly allocate successfuly when starting position [0,0]
+        # self.spectrum = self.generate_blocky_binary_matrix(self.cores, self.slots, max_fill_prob=0.5, max_attempts=300) #Generates episode's matrix
+        # self.spectrum[0][0] = 1 #No longer will randomly allocate successfuly when starting position [0,0]
+        self.spectrum = self.allocator.spectrum_current_attempt  # ADD TO TEST
         ratio = np.sum(self.spectrum) / self.spectrum.size
-        print(f"Current Occ. Ratio: {ratio:.3f}")
-        # Demanded Slots (probabilistic distribution for training)
-        self.demanded_slots = self.generate_probabilistic_number()  # Changes at every reset.
+        #print(f"Current Occ. Ratio: {ratio:.3f}")
+        # Demanded Slots (test version comes from allocator)
+        self.demanded_slots = np.array([int(self.allocator.demanded_slots_current_attempt)], dtype=np.int32)  # ADD TO TEST
+        self.demanded_slots_int = self.allocator.demanded_slots_current_attempt  # ADD TO TEST
         # Starting Coordinate
         self.current_starting_position = [0, 0]  # Start position for our block
         # Alternative random start
@@ -87,9 +94,6 @@ class TetrisResourceAllocation(gym.Env):
         self.total_positive_reward_on_matrix = self.remaining_reward_on_matrix #Independent copy
         # Write candidate block to auxiliary matrix
         self.write_to_auxiliary_matrix()
-        # Save_matrix to turn into image before action
-        if self.current_timestep == 0:
-            self.save_matrix_log(self.current_placement_attempt_matrix, "action", self.current_timestep)
         # Initialize state
         self.state = {
             "spectrum": self.spectrum.flatten(),
@@ -101,6 +105,7 @@ class TetrisResourceAllocation(gym.Env):
 
     def step(self, action):
         """Take an action and compute the next state, reward, and done flag."""
+        action = action[0]  # ADD TO TEST
         # Iterate counters
         self.this_episodes_timestep += 1
         self.current_timestep += 1
@@ -108,7 +113,8 @@ class TetrisResourceAllocation(gym.Env):
         overlaps = self.count_overlaps() #Counts from spectrum matrix
         # If no action was needed because the start_position was valid
         if overlaps == 0 and self.this_episodes_timestep == 1:
-            print(f"Ended in success at step 1, at random")
+            #print(f"Ended in success at step 1, at random")
+            self.allocator.rl_list_of_regions = {self.current_episode: self.write_in_region_form()}  # ADD TO TEST
             self.write_to_spectrum()
             self.state = {
                 "spectrum": self.spectrum.flatten(),
@@ -145,19 +151,19 @@ class TetrisResourceAllocation(gym.Env):
             reward = self.collect_reward()
             # Count new position's overlaps/overshadows
             new_overlaps = self.count_overlaps()
-            self.save_matrix_log(self.current_placement_attempt_matrix, "action", self.current_timestep)
             if new_overlaps == 0:
-                print(f"Ended in success at step {self.this_episodes_timestep}")
+                #print(f"Ended in success at step {self.this_episodes_timestep}")
+                self.allocator.rl_list_of_regions = {self.current_episode: self.write_in_region_form()}  # ADD TO TEST
                 self.write_to_spectrum()
                 self.state = {
                     "spectrum": self.spectrum.flatten(),
                     "current_placement_attempt_matrix": self.current_placement_attempt_matrix.flatten(),
                     "reward_matrix": self.reward_matrix.flatten()
                 }
-                reward += self.demanded_slots * ((self.max_episode_length - self.this_episodes_timestep)/self.max_episode_length)
+                reward += self.demanded_slots_int * ((self.max_episode_length - self.this_episodes_timestep)/self.max_episode_length)
                 return self.state, reward, True, True, {}
             elif (self.this_episodes_timestep == self.max_episode_length) or (self.remaining_reward_on_matrix/self.total_positive_reward_on_matrix <= 0.05):
-                print(f"Could not place in the spectrum until the end of the episode. Positive reward remaining: {(self.remaining_reward_on_matrix/self.total_positive_reward_on_matrix)*100:.3f}%")
+                #print(f"Could not place in the spectrum until the end of the episode. Positive reward remaining: {(self.remaining_reward_on_matrix/self.total_positive_reward_on_matrix)*100:.3f}%")
                 self.state = {
                     "spectrum": self.spectrum.flatten(),
                     "current_placement_attempt_matrix": self.current_placement_attempt_matrix.flatten(),
@@ -179,7 +185,7 @@ class TetrisResourceAllocation(gym.Env):
         # Not a valid action
         else:
             if (self.this_episodes_timestep == self.max_episode_length) or (self.remaining_reward_on_matrix/self.total_positive_reward_on_matrix <= 0.05):
-                print(f"Could not place in the spectrum until the end of the episode. Positive reward remaining: {(self.remaining_reward_on_matrix / self.total_positive_reward_on_matrix) * 100:.3f}%")
+                #print(f"Could not place in the spectrum until the end of the episode. Positive reward remaining: {(self.remaining_reward_on_matrix / self.total_positive_reward_on_matrix) * 100:.3f}%")
                 self.state = {
                     "spectrum": self.spectrum.flatten(),
                     "current_placement_attempt_matrix": self.current_placement_attempt_matrix.flatten(),
@@ -199,20 +205,20 @@ class TetrisResourceAllocation(gym.Env):
                 return self.state, reward, False, False, {}
 
     def write_to_spectrum(self):
-        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots)):
+        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots_int)):
             if self.spectrum[self.current_starting_position[0]][i] == 1:
                 raise KeyError("Should not happen")
             else:
                 self.spectrum[self.current_starting_position[0]][i] = 1
 
     def write_to_auxiliary_matrix(self):
-        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots)):
+        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots_int)):
             self.current_placement_attempt_matrix[self.current_starting_position[0]][i] += 2
 
     def collect_reward(self):
         total_reward = 0
         total_positive_reward = 0
-        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots)):
+        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots_int)):
             if self.reward_matrix[self.current_starting_position[0]][i] > 0:
                 total_positive_reward += self.reward_matrix[self.current_starting_position[0]][i]
             total_reward += self.reward_matrix[self.current_starting_position[0]][i]
@@ -221,7 +227,7 @@ class TetrisResourceAllocation(gym.Env):
         return total_reward
 
     def dewrite_from_auxiliary_matrix(self):
-        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots)):
+        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots_int)):
             self.current_placement_attempt_matrix[self.current_starting_position[0]][i] -= 2
 
     def get_random_position(self, number_of_cores=7):
@@ -239,20 +245,20 @@ class TetrisResourceAllocation(gym.Env):
 
     def count_overlaps(self):
         overlaps = 0
-        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots)):
+        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots_int)):
             if self.spectrum[self.current_starting_position[0]][i]:
                 overlaps += 1
         return overlaps
 
     def get_first_overlap(self):
-        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots)):
+        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots_int)):
             if self.spectrum[self.current_starting_position[0]][i]:
                 return self.current_starting_position[0], i
         raise KeyError("Can only be used when there are overlaps!")
 
     def get_last_overlap(self):
         a, b = -1, -1
-        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots)):
+        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots_int)):
             if self.spectrum[self.current_starting_position[0]][i]:
                 a, b = self.current_starting_position[0], i
         if a != -1:
@@ -297,7 +303,7 @@ class TetrisResourceAllocation(gym.Env):
             self.current_starting_position[0] += 1
         elif action == 2:
             # Left
-            self.current_starting_position[1] = self.candidate_pivot[1] - self.demanded_slots
+            self.current_starting_position[1] = self.candidate_pivot[1] - self.demanded_slots_int
         elif action == 3:
             self.current_starting_position[1] = self.candidate_pivot[1] + 1
 
@@ -323,7 +329,7 @@ class TetrisResourceAllocation(gym.Env):
                 return False
         elif action == 3:
             # Right
-            if self.current_starting_position[1] + self.demanded_slots <= self.slots - 2:
+            if self.current_starting_position[1] + self.demanded_slots_int <= self.slots - 2:
                 return True
             else:
                 return False
@@ -344,13 +350,13 @@ class TetrisResourceAllocation(gym.Env):
                 return False
         elif action == 2:
             # Left
-            if self.candidate_pivot[1] - self.demanded_slots >= 0:
+            if self.candidate_pivot[1] - self.demanded_slots_int >= 0:
                 return True
             else:
                 return False
         elif action == 3:
             # Right
-            if self.candidate_pivot[1] + self.demanded_slots < self.slots:
+            if self.candidate_pivot[1] + self.demanded_slots_int < self.slots:
                 return True
             else:
                 return False
@@ -457,3 +463,9 @@ class TetrisResourceAllocation(gym.Env):
             f.write(f"# {filename_prefix}_{step:04d}.png\n")
             np.savetxt(f, matrix, fmt='%d')
             f.write("\n")
+
+    def write_in_region_form(self):
+        region = []
+        for i in range(self.current_starting_position[1], (self.current_starting_position[1] + self.demanded_slots_int)):
+            region.append((self.current_starting_position[0], i))
+        return region

@@ -88,16 +88,28 @@ class TrafficGenerator:
     def get_slots_bandwidth(self):
         return self.slots_bandwidth
 
-    def generate_poisson_events(self, load_erlangs, average_holding_time, attempt_n_calls):
+    # def generate_poisson_events(self, load_erlangs, average_holding_time, attempt_n_calls):
+    #     # Using offered load in E to calculate
+    #     call_arrival_rate = load_erlangs / average_holding_time
+    #     # Total (simulation) time duration will depend on the arrival rate and number of desired calls to be attempted
+    #     time_duration = attempt_n_calls / call_arrival_rate
+    #     # Calculated so that it is = to attempt_n_calls, the number of calls I want to exist in my simulation
+    #     num_events = np.random.poisson(call_arrival_rate * time_duration)
+    #     event_times = np.sort(np.random.uniform(0, time_duration, num_events))
+    #     inter_arrival_times = np.diff(event_times)
+    #     return num_events, event_times, inter_arrival_times, time_duration
+
+    def generate_poisson_events(self, load_erlangs, mean_holding_time, attempt_n_calls):
         # Using offered load in E to calculate
-        call_arrival_rate = load_erlangs / average_holding_time
+        call_arrival_rate = load_erlangs / mean_holding_time  # IN SECONDS 1000E/1s = 1000 calls/s
         # Total (simulation) time duration will depend on the arrival rate and number of desired calls to be attempted
-        time_duration = attempt_n_calls / call_arrival_rate
-        # Calculated so that it is = to attempt_n_calls, the number of calls I want to exist in my simulation
-        num_events = np.random.poisson(call_arrival_rate * time_duration)
-        event_times = np.sort(np.random.uniform(0, time_duration, num_events))
-        inter_arrival_times = np.diff(event_times)
-        return num_events, event_times, inter_arrival_times, time_duration
+        total_time_duration = attempt_n_calls / call_arrival_rate  # IN SECONDS 10000calls/1000 = 10s duration
+        # Exponential
+        the_lambda = attempt_n_calls / total_time_duration
+        inter_arrival_times = np.random.exponential(scale=1 / the_lambda, size=attempt_n_calls)
+        # Calculate the cumulative sum to get the arrival times
+        arrival_times = np.cumsum(inter_arrival_times)
+        return attempt_n_calls, arrival_times, inter_arrival_times, total_time_duration
 
     def generate_call_durations(self, num_calls, mean_holding_time):
         # Exponential distribution for call durations (holding times)
