@@ -27,26 +27,26 @@ import concurrent.futures
 matrix_rows = 7
 matrix_cols = 320
 max_attempts = 10000
-rounds_per_load = 8
+rounds_per_load = 5
 verbose = False
 seed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 starting_load = 700
 final_load = 1600
 step = 25
-use_multi_criteria = True
+use_multi_criteria = False
 consider_crosstalk_threshold = True
-region_finding_algorithm = "FF"  # FF BF MMM MF fca_rcsa reinforcement_agent_test  ###
-rl_environment = "na" #Tetris1, Tetris3 #
+region_finding_algorithm = "BF"  # FF BF MMM MF fca_rcsa reinforcement_agent_test  ###
+rl_environment = "None" #Tetris1, Tetris3 #
 max_episode_length = matrix_rows * matrix_cols
 total_timesteps = matrix_rows * matrix_cols * max_attempts
-trained_model_path = "na"
+trained_model_path = "None"
 base_dir = os.path.dirname(__file__)
-log_name = "FF(mc)2"
+log_name = "BF(BaselineNewPoisson)"
 if "_" in log_name:
     raise KeyError(f"Can't put _ or .csv on log name")
 
 csv_files = [f"BBR_{log_name}.csv", f"fragmentation_{log_name}.csv", f"CpS_{log_name}.csv", f"BCR_{log_name}.csv", f"crosstalk_{log_name}.csv"]
-csv_save_folder = os.path.join(base_dir, "CSVs")
+csv_save_folder = os.path.join(base_dir, "NSF_BF_POISSON")
 logger = Logger.Logger(csv_save_folder, csv_files)
 XML_path = os.path.join(base_dir, "xml/Image-nsf.xml")
 
@@ -64,7 +64,7 @@ def run_simulation_for_load(load):
         topology = TopologyBuilder.NetworkXGraphBuilder(XML_path, matrix_rows, matrix_cols)
         traffic_generator_object = TrafficGenerator.TrafficGenerator(XML_path, seed[interval])
         mean_holding_time = traffic_generator_object.get_mean_holding_time()
-        num_events, event_times, inter_arrival_times, _ = traffic_generator_object.generate_poisson_events(imposed_load, mean_holding_time, max_attempts)
+        _, _, inter_arrival_times, _ = traffic_generator_object.generate_poisson_events(imposed_load, mean_holding_time, max_attempts)
         max_attempts2 = len(inter_arrival_times)  # NP Poisson implementation does not result in exact number == max attempts.
         call_duration_distribution, _ = traffic_generator_object.generate_call_durations(max_attempts2+1, mean_holding_time)
         generated_pairs = traffic_generator_object.generate_pairs(max_attempts2)
@@ -77,7 +77,7 @@ def run_simulation_for_load(load):
         execution_time = end_time - start_time
         elapsed_simulation_time = env.now
         print(f"Mean: {mean_holding_time}")
-
+        print(f"Load: {load} (erase print)")
         metrics.add_execution_time_of_round(execution_time)
         metrics.add_simulation_time_of_round(elapsed_simulation_time)
         metrics.calculate_end_of_simulation_round_fragmentation()

@@ -24,5 +24,7 @@ def print_columns_as_arrays(filename):
 
 
 # Replace 'your_file.csv' with your actual file name
-filename = 'BBR_tetris3(test10k).csv'
+# filename = 'BBR_tetris3(test10k).csv'
+# print_columns_as_arrays(filename)
+filename = 'C:\\Users\\ramon\\Downloads\\SimpleSimSDM\\SimpleSimSDM\\CSV_final_comparison\\PAN\\BF\\BBR_BF(finalpan).csv'
 print_columns_as_arrays(filename)

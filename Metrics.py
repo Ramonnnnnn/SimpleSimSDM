@@ -193,8 +193,8 @@ class Metrics:
 
     def calculate_end_of_simulation_round_bbr(self, blocked_bandwidth, successful_bandwidth):
         self.bbr_of_every_round.append((blocked_bandwidth / (blocked_bandwidth + successful_bandwidth)) * 100)
-        print(self.bbr_of_every_round)
-        print(self.bcr_of_every_round)
+        print(f"BBR: {self.bbr_of_every_round}")
+
 
     def calculate_final_BBR_and_confidence_interval(self):
         final_BBR = np.mean(self.bbr_of_every_round)
