@@ -21,35 +21,52 @@ import Metrics
 import Logger
 import Parser
 import concurrent.futures
+import CSVs.SortResults
+import FinalStatisticsPlotter
 
+#Get configurations.
+#A .yaml file can be used to better map the configurations used for every run
+# Assure load_config loads the right configuration file
+from ConfigLoader import load_config
+cfg = load_config("configuration_files/config.yaml")
 
 # Simulation parameters
-matrix_rows = 7
-matrix_cols = 320
-max_attempts = 10000
-rounds_per_load = 5
-verbose = False
-seed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-starting_load = 700
-final_load = 1600
-step = 25
-use_multi_criteria = False
-consider_crosstalk_threshold = True
-region_finding_algorithm = "BF"  # FF BF MMM MF fca_rcsa reinforcement_agent_test  ###
-rl_environment = "None" #Tetris1, Tetris3 #
-max_episode_length = matrix_rows * matrix_cols
-total_timesteps = matrix_rows * matrix_cols * max_attempts
-trained_model_path = "None"
-base_dir = os.path.dirname(__file__)
-log_name = "BF(BaselineNewPoisson)"
-if "_" in log_name:
-    raise KeyError(f"Can't put _ or .csv on log name")
+matrix_rows = cfg["matrix_rows"] #
+matrix_cols = cfg["matrix_cols"]
+max_attempts = cfg["max_attempts"]
+rounds_per_load = cfg["rounds_per_load"]
+verbose = cfg["verbose"]
+seed = cfg["seed"]
+starting_load = cfg["starting_load"]
+final_load = cfg["final_load"]
+step = cfg["step"]
+use_multi_criteria = cfg["use_multi_criteria"]
+consider_crosstalk_threshold = cfg["consider_crosstalk_threshold"]
 
-csv_files = [f"BBR_{log_name}.csv", f"fragmentation_{log_name}.csv", f"CpS_{log_name}.csv", f"BCR_{log_name}.csv", f"crosstalk_{log_name}.csv"]
-csv_save_folder = os.path.join(base_dir, "NSF_BF_POISSON")
+# Decides core and spectrum assignment strategy
+region_finding_algorithm = cfg["region_finding_algorithm"]
+
+# RL parameters (only necessary if using RL, otherwise NONE)
+rl_environment = cfg["rl_environment"]
+max_episode_length = cfg["max_episode_length"]
+total_timesteps = cfg["total_timesteps"]
+trained_model_path = cfg["trained_model_path"]
+
+# Logging
+log_name = cfg["log_name"]
+csv_files = cfg["csv_files"]
+csv_save_folder = cfg["csv_save_folder"]
+XML_path = cfg["xml_path"]
 logger = Logger.Logger(csv_save_folder, csv_files)
-XML_path = os.path.join(base_dir, "xml/Image-nsf.xml")
 
+if verbose:
+    print(f"SDM-EON with: {matrix_rows} cores and {matrix_cols} slots")
+    print(f"Rounds per load: {rounds_per_load} (for confidence interval calculation)")
+    print(f"Starts at: {starting_load}E, up to {final_load}, with a {step}E step")
+    if use_multi_criteria:
+        print("Uses multi-criteria routing.")
+    else:
+        print("Uses minimum distance routing.")
 
 def run_simulation_for_load(load):
 
@@ -76,8 +93,8 @@ def run_simulation_for_load(load):
         end_time = time.time()
         execution_time = end_time - start_time
         elapsed_simulation_time = env.now
-        print(f"Mean: {mean_holding_time}")
-        print(f"Load: {load} (erase print)")
+        if verbose:
+            print(f"Execution Time: {execution_time} (load: {load}, round: {interval}/{rounds_per_load})")
         metrics.add_execution_time_of_round(execution_time)
         metrics.add_simulation_time_of_round(elapsed_simulation_time)
         metrics.calculate_end_of_simulation_round_fragmentation()
@@ -106,6 +123,12 @@ def main():
             for csv_file, (final_metric, confidence) in results.items():
                 logger.add_datapoint(csv_file, load, final_metric, confidence)
             print(f"Completed simulation for load {load}")
+            sort_results = CSVs.SortResults.sort_csv_by_first_column(csv_save_folder)
+            grapher = FinalStatisticsPlotter.MultiCurvePlotter(csv_save_folder, "plots") #updates plot after every simulation round is complete
+
+            # Plot metrics
+            grapher.parse_csv_files()
+            grapher.plot_curves()
 
 
 if __name__ == "__main__":
