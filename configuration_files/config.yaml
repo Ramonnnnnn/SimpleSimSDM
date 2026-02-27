@@ -1,0 +1,50 @@
+simulation:
+  matrix_rows: 7
+  matrix_cols: 320
+  max_attempts: 10000
+  rounds_per_load: 5
+  verbose: true
+
+  starting_load: 1000
+  final_load: 1600
+  step: 25
+
+  use_multi_criteria: false
+  consider_crosstalk_threshold: true
+  region_finding_algorithm: FF # Examples: FF, BF, MMM, MF, fca_rcsa, reinforcement_agent_test  ###
+
+
+  seed:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+
+  rl_environment: None   # EX: Tetris1, Tetris3, etc. (Only set if "region_finding_algorithm" is set to "reinforcement_agent_test")
+
+rl:
+  trained_model_path: None #sould point to the .zip file containing the trained model/agent for testing.
+  max_episode_length: 2240 #matrix_rows * matrix_cols
+  total_timesteps: 10_000_000 #Depending on the algorithm this number will not be followed exactly, because of the need for certain size batches
+
+logging:
+  log_name: "FF(NSF)" #name of the "approach" being tested, ex: MyApproach(v.1.0)
+
+  #Current simulation metrics - don't change unless you implemented a new metric, in which case you must first alter the final loop on "run_simulation_for_load" accordingly
+  csv_prefixes:
+    - BBR
+    - fragmentation
+    - CpS
+    - BCR
+    - crosstalk
+
+paths:
+  # base dir - resolved in code
+  csv_save_subfolder: "CSVs/NSF_baseline_comparisons" # Directory that will hold the statistics for a given approach, in a given topology, across the whole simulation interval
+  xml_path: "xml/Image-nsf.xml" # topology path (we use xmls to write the topologies. look at xml directory for examples)
