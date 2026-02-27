@@ -64,13 +64,7 @@ class Allocator:
         self.time_between_calls = np.random.default_rng().exponential(scale=4,
                                                                       size=self.max_attempts)  #Soon to deprecated
 
-        # Calculations
-        load = imposed_load
-        mean_holding_time = traffic_generator_obj.get_mean_holding_time()  # Sum(holding_time * (weight/total_weight)) p/ for every call type.
-        mean_rate = traffic_generator_obj.get_mean_rate()  # Sum(rate * (weight/total_weight)) '' ''
-        max_rate = traffic_generator_obj.get_max_rate()  # Max_rate parameter of the XML
 
-        #self.mean_arrival_time = (mean_holding_time * (mean_rate / max_rate)) / load #Soon to be deprecated
 
         # METRICS
         self.metrics = metrics
@@ -153,16 +147,17 @@ class Allocator:
         self.metrics.mean_crosstalk_topology(self.topology.get_all_crosstalk_edge_matrices())
 
         if self.verbose:
-            print(f"Call-Number: {attempt}")
+            print(f"Load: {self.imposed_load}")
+            print(f"Call-Number: {attempt}/{self.max_attempts}")
             print(f"(Source/Destination): {self.generated_pairs[attempt][0]} -> {self.generated_pairs[attempt][1]}")
             print(f"rate: {self.call_info[self.num_call_types_dist[attempt]]['rate']}")
 
-        if self.use_multi_criteria == False:
+        if not self.use_multi_criteria:
             # SHORTEST PATHS TO THE SRC-DST
             shortest_paths = self.topology.find_n_shortest_paths(self.graph, self.generated_pairs[attempt][0],
                                                                  self.generated_pairs[attempt][1], 5)
             rate = self.call_info[self.num_call_types_dist[attempt]]['rate']  # 25, 50... 1000
-        if self.use_multi_criteria == True:
+        elif self.use_multi_criteria:
             # SHORTEST MULTI-CRITERIA PATH
             shortest_paths = self.topology.find_n_shortest_weighted_paths(self.graph, self.generated_pairs[attempt][0],
                                                                           self.generated_pairs[attempt][1], 5)
