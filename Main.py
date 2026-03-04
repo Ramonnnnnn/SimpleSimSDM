@@ -79,6 +79,9 @@ def run_simulation_for_load(load):
         imposed_load = load
         env = simpy.Environment()
         topology = TopologyBuilder.NetworkXGraphBuilder(XML_path, matrix_rows, matrix_cols)
+        if verbose and imposed_load == starting_load and interval == 0 :
+            topology.draw_graph()
+
         traffic_generator_object = TrafficGenerator.TrafficGenerator(XML_path, seed[interval])
         mean_holding_time = traffic_generator_object.get_mean_holding_time()
         _, _, inter_arrival_times, _ = traffic_generator_object.generate_poisson_events(imposed_load, mean_holding_time, max_attempts)
