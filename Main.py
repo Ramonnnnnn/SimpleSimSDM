@@ -6,8 +6,7 @@
 # name convention: metric_algorithm.csv
 # metric name MUST be same as method name for final calculations
 # metrics available: "BBR", "fragmentation" & "CpS"
-
-
+#
 # IMPLEMENTATION IDEAS
 #   BETTER SEED IMPLEMENTATION
 #   Log: include hops, ee.
@@ -27,6 +26,8 @@ import FinalStatisticsPlotter
 #Get configurations.
 #A .yaml file can be used to better map the configurations used for every run
 # Assure load_config loads the right configuration file
+
+
 from ConfigLoader import load_config
 cfg = load_config("configuration_files/config.yaml")
 
