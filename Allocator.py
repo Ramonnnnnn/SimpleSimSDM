@@ -49,8 +49,7 @@ class Allocator:
         # Topology
         self.topology = topology
         self.graph = topology.get_graph()
-        if verbose:
-            topology.draw_graph()
+
 
         if self.seed is not None:
             np.random.seed(self.seed)
