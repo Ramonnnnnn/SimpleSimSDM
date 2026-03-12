@@ -1,12 +1,10 @@
 ## Ignore specific files
 #api_keys.txt
-#temp_log.txt
 #
 ## Ignore all files with a specific extension
 #*.log
-#*.temp
 #
-## Ignore a specific directory (append a slash /)
+## Ignore a specific directory (add a slash /)
 #build/
 #.idea/
 
