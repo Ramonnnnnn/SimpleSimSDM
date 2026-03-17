@@ -1,0 +1,20 @@
+## Ignore specific files
+#api_keys.txt
+#
+## Ignore all files with a specific extension
+#*.log
+#
+## Ignore a specific directory (add a slash /)
+#build/
+#.idea/
+
+
+#Ignore all log/metric files
+ *.csv
+ *.txt
+ *.png
+ *.zip
+ CSV_archived
+ CSV_final_comparison
+
+
