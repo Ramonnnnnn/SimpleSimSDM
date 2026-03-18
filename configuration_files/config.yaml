@@ -1,7 +1,7 @@
 simulation:
   matrix_rows: 7
   matrix_cols: 320
-  max_attempts: 10000
+  max_attempts: 100
   rounds_per_load: 5
   verbose: false
 

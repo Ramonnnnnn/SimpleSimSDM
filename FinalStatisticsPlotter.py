@@ -1,12 +1,14 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 
 class MultiCurvePlotter:
     def __init__(self, directory, output_dir):
         self.directory = directory
-        self.output_dir = output_dir
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.data = {}
 
     def parse_csv_files(self):
