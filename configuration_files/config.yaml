@@ -46,5 +46,5 @@ logging:
 
 paths:
   # base dir - resolved in code
-  csv_save_subfolder: "CSVs/NSF_baseline_comparisons" # Directory that will hold the statistics for a given approach, in a given topology, across the whole simulation interval
+  csv_save_subfolder: "csv_metric_files" # Directory that will hold the statistics for a given approach, in a given topology, across the whole simulation interval
   xml_path: "xml/Image-nsf.xml" # topology path (we use xmls to write the topologies. look at xml directory for examples)
