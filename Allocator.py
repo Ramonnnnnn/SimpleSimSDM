@@ -4,11 +4,7 @@ import InterfaceTerminal
 import LightPath
 
 # RESOURCE ALLOCATION ALGOs
-import FirstFit
-import SmallestFit
-import MMM
-import MF
-import FcaRcsa
+from allocation_policies import FirstFit, SmallestFit, MMM, MF, FcaRcsa
 
 
 # Reinforcement Learning Resources

@@ -11,7 +11,7 @@ simulation:
 
   use_multi_criteria: false
   consider_crosstalk_threshold: true
-  region_finding_algorithm: FF # Examples: FF, BF, MMM, MF, fca_rcsa, reinforcement_agent_test  ###
+  region_finding_algorithm: FF # Examples: FF, BF, MMM, MF, fca_rcsa, reinforcement_agent_test (internal test phase)   ###
 
 
   seed:
@@ -26,7 +26,7 @@ simulation:
     - 9
     - 10
 
-  rl_environment: None   # EX: Tetris1, Tetris3, etc. (Only set if "region_finding_algorithm" is set to "reinforcement_agent_test")
+  rl_environment: None   # EX: Tetris1, Tetris3, etc. (Only set if "region_finding_algorithm" is set to "reinforcement_agent_test") Internal test phase
 
 rl:
   trained_model_path: None #sould point to the .zip file containing the trained model/agent for testing.
