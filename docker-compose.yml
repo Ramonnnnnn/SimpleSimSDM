@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  simplesim:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - CONFIG_PATH=configuration_files/config.yaml
+    command: python main.py

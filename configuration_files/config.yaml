@@ -3,7 +3,7 @@ simulation:
   matrix_cols: 320
   max_attempts: 10000
   rounds_per_load: 5
-  verbose: true
+  verbose: false
 
   starting_load: 1000
   final_load: 1600

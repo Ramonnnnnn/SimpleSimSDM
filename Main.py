@@ -29,7 +29,9 @@ import FinalStatisticsPlotter
 
 
 from ConfigLoader import load_config
-cfg = load_config("configuration_files/config.yaml")
+import os
+config_path = os.getenv("CONFIG_PATH", "configuration_files/config.yaml")
+cfg = load_config(config_path)
 
 # Simulation parameters
 matrix_rows = cfg["matrix_rows"] #
