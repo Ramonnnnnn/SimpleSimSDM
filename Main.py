@@ -20,7 +20,7 @@ import Metrics
 import Logger
 import Parser
 import concurrent.futures
-import CSVs.SortResults
+import csv_metric_files.SortResults
 import FinalStatisticsPlotter
 
 #Get configurations.
@@ -129,7 +129,7 @@ def main():
             for csv_file, (final_metric, confidence) in results.items():
                 logger.add_datapoint(csv_file, load, final_metric, confidence)
             print(f"Completed simulation for load {load}")
-            sort_results = CSVs.SortResults.sort_csv_by_first_column(csv_save_folder)
+            sort_results = csv_metric_files.SortResults.sort_csv_by_first_column(csv_save_folder)
             grapher = FinalStatisticsPlotter.MultiCurvePlotter(csv_save_folder, "plots") #updates plot after every simulation round is complete
 
             # Plot metrics
