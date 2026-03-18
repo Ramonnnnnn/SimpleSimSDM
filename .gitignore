@@ -16,5 +16,8 @@
  *.zip
  CSV_archived
  CSV_final_comparison
+ test.py
+ SHDLS.py
+ MeenyFirst.py
 
 
