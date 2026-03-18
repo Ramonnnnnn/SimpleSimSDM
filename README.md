@@ -35,19 +35,16 @@ integration with Python-based scientific and machine learning workflows.
 
 -   Python 3.11 or higher
 -   pip
+-   docker
 
-### Clone the repository
-
-``` bash
-git clone https://github.com/Ramonnnnnn/SimpleSim.git
-cd SimpleSimSDM
-```
-
-### Install dependencies
+### Instructions
 
 ``` bash
-pip install -r requirements.txt
+git clone  https://github.com/Ramonnnnnn/SimpleSim
+cd  https://github.com/Ramonnnnnn/SimpleSim
+docker compose up
 ```
+
 
 ## Supported Performance Metrics
 
@@ -112,9 +109,9 @@ Ramon A. Oliveira\
 Federal University of Pará (UFPA)\
 ramon.oliveira@itec.ufpa.br
 
-## Running the Program
+## Personalizing Simulation Parameters
 
-To run this program, you must first create a YAML configuration file containing the required simulation parameters.
+To set personalized simulation parameters you must first create a YAML configuration file containing the required simulation parameters.
 
 ### Step 1: Create a Configuration File
 
