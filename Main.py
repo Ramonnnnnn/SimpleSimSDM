@@ -88,7 +88,7 @@ def run_simulation_for_load(load):
         traffic_generator_object = TrafficGenerator.TrafficGenerator(XML_path, seed[interval])
         mean_holding_time = traffic_generator_object.get_mean_holding_time()
         _, _, inter_arrival_times, _ = traffic_generator_object.generate_poisson_events(imposed_load, mean_holding_time, max_attempts)
-        max_attempts2 = len(inter_arrival_times)  # NP Poisson implementation does not result in exact number == max attempts.
+        max_attempts2 = len(inter_arrival_times)  #
         call_duration_distribution, _ = traffic_generator_object.generate_call_durations(max_attempts2+1, mean_holding_time)
         generated_pairs = traffic_generator_object.generate_pairs(max_attempts2)
         call_types_dist = traffic_generator_object.generate_normal_distribution_call_types(max_attempts2)

@@ -47,11 +47,11 @@ To validate functionality:
 
 Example execution:
 
-    python main.py --config config/nsf_experiment.yaml
+    python main.py --config config/config.yaml
 
 Expected outputs:
 
-- CSV files in `results/`
+- CSV files in `csv_metric_files/`
 - Plots in `plots/`
 - Automatic 95% confidence interval computation
 
@@ -83,7 +83,7 @@ The artifact supports reproducible experimentation:
 
 To reproduce paper results:
 
-    python main.py --config config/nsf_experiment.yaml
+    python main.py --config config/config.yaml
 
 Or via Docker:
 

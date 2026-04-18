@@ -55,7 +55,7 @@ This configuration includes:
 
 After execution, the following artifacts will be generated:
 
--   `results/*.csv` --- structured performance metrics
+-   `csv_metric_files/*.csv` --- structured performance metrics
 -   `plots/*.png` --- comparative performance curves
 
 The CSV files contain:

@@ -10,7 +10,7 @@ with SimpleSimSDM using different RMSSA strategies and configurations.
 Run the default benchmark configuration:
 
 ```
-python main.py --config config/nsf_experiment.yaml
+python main.py --config config/config.yaml
 ```
 
 This will:

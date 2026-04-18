@@ -88,16 +88,7 @@ class TrafficGenerator:
     def get_slots_bandwidth(self):
         return self.slots_bandwidth
 
-    # def generate_poisson_events(self, load_erlangs, average_holding_time, attempt_n_calls):
-    #     # Using offered load in E to calculate
-    #     call_arrival_rate = load_erlangs / average_holding_time
-    #     # Total (simulation) time duration will depend on the arrival rate and number of desired calls to be attempted
-    #     time_duration = attempt_n_calls / call_arrival_rate
-    #     # Calculated so that it is = to attempt_n_calls, the number of calls I want to exist in my simulation
-    #     num_events = np.random.poisson(call_arrival_rate * time_duration)
-    #     event_times = np.sort(np.random.uniform(0, time_duration, num_events))
-    #     inter_arrival_times = np.diff(event_times)
-    #     return num_events, event_times, inter_arrival_times, time_duration
+
 
     def generate_poisson_events(self, load_erlangs, mean_holding_time, attempt_n_calls):
         # Using offered load in E to calculate
