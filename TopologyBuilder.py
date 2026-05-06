@@ -228,6 +228,7 @@ class NetworkXGraphBuilder:
         else:
             raise ValueError(f"Edge from {source} to {destination} does not exist.")
 
+
     def set_edge_cps(self, source, destination):
         if self.graph.has_edge(source, destination):
             edge_matrix = self.get_edge_matrix(source, destination)
@@ -243,28 +244,20 @@ class NetworkXGraphBuilder:
                 for column in range(columns):
                     if edge_matrix[row][column] == 1:
                         used_slots += 1
-                        if row == 0:
-                            if edge_matrix[rows - 1][column] == 1:
-                                counter += 1
-                            if edge_matrix[row + 1][column] == 1:
-                                counter += 1
-                        elif row == rows - 1:
-                            if edge_matrix[0][column] == 1:
-                                counter += 1
-                            if edge_matrix[row - 1][column] == 1:
-                                counter += 1
-                        else:
-                            if edge_matrix[row - 1][column] == 1:
-                                counter += 1
-                            if edge_matrix[row + 1][column] == 1:
-                                counter += 1
-
+                        neighbors = figure_neighbors_seven_core_MCF(row)
+                        overlap = False
+                        for nei in neighbors:
+                            if edge_matrix[nei][column] == 1:
+                                overlap = True
+                        if overlap:
+                            counter += 1
             if used_slots > 0:
                 self.graph[source][destination]['cps'] = counter / used_slots
             elif used_slots == 0:
                 self.graph[source][destination]['cps'] = 0
         else:
             raise ValueError(f"Edge from {source} to {destination} does not exist.")
+
 
     def get_edge_cps(self, source, destination):
         if self.graph.has_edge(source, destination):
